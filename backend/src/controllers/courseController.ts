@@ -439,14 +439,22 @@ export const requestCourseAccess = async (
     });
 
     // Create notification for teacher
-    const studentName = `${req.user!.firstName} ${req.user!.lastName}`;
-    await createNotification(
-      course.teacherId,
-      'COURSE_REQUEST',
-      'Новый запрос на доступ к курсу',
-      `${studentName} запросил доступ к курсу "${course.title}"`,
-      `/teacher/dashboard`
-    );
+    // Get student data from database
+    const student = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { firstName: true, lastName: true },
+    });
+    
+    if (student) {
+      const studentName = `${student.firstName} ${student.lastName}`;
+      await createNotification(
+        course.teacherId,
+        'COURSE_REQUEST',
+        'Новый запрос на доступ к курсу',
+        `${studentName} запросил доступ к курсу "${course.title}"`,
+        `/teacher/dashboard`
+      );
+    }
 
     res.status(201).json({
       success: true,

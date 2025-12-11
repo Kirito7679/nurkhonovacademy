@@ -221,7 +221,10 @@ export const createComment = async (
           },
         },
         lesson: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            courseId: true,
             course: {
               select: {
                 teacherId: true,
@@ -235,14 +238,22 @@ export const createComment = async (
 
     // Create notification for teacher if student commented
     if (!validatedData.parentId && req.user!.role === 'STUDENT') {
-      const studentName = `${req.user!.firstName} ${req.user!.lastName}`;
-      await createNotification(
-        lesson.course.teacherId,
-        'COMMENT',
-        'Новый комментарий к уроку',
-        `${studentName} оставил комментарий к уроку "${lesson.title}" в курсе "${lesson.course.title}"`,
-        `/courses/${lesson.courseId}/lessons/${lessonId}`
-      );
+      // Get student data from database
+      const student = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: { firstName: true, lastName: true },
+      });
+      
+      if (student) {
+        const studentName = `${student.firstName} ${student.lastName}`;
+        await createNotification(
+          comment.lesson.course.teacherId,
+          'COMMENT',
+          'Новый комментарий к уроку',
+          `${studentName} оставил комментарий к уроку "${comment.lesson.title}" в курсе "${comment.lesson.course.title}"`,
+          `/courses/${comment.lesson.courseId}/lessons/${lessonId}`
+        );
+      }
     }
 
     res.status(201).json({

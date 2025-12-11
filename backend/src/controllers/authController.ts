@@ -56,6 +56,7 @@ export const register = async (
     });
 
     // Generate token
+    // @ts-expect-error - jwt.sign has complex overloads that TypeScript can't infer correctly
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
@@ -100,6 +101,7 @@ export const login = async (
     }
 
     // Generate token
+    // @ts-expect-error - jwt.sign has complex overloads that TypeScript can't infer correctly
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
@@ -209,7 +211,7 @@ export const getMyStats = async (
       : 0;
 
     // Get recent activity (last 5 completed lessons)
-    // For SQLite compatibility, we'll sort by createdAt and filter by completed
+    // For SQLite compatibility, we'll sort by watchedAt and filter by completed
     const allCompletedProgress = await prisma.studentProgress.findMany({
       where: {
         studentId: userId,
@@ -229,11 +231,11 @@ export const getMyStats = async (
       },
     });
 
-    // Sort by watchedAt (if exists) or createdAt, then take top 5
+    // Sort by watchedAt (if exists), then take top 5
     const recentActivity = allCompletedProgress
       .sort((a, b) => {
-        const aDate = a.watchedAt ? new Date(a.watchedAt).getTime() : new Date(a.createdAt).getTime();
-        const bDate = b.watchedAt ? new Date(b.watchedAt).getTime() : new Date(b.createdAt).getTime();
+        const aDate = a.watchedAt ? new Date(a.watchedAt).getTime() : 0;
+        const bDate = b.watchedAt ? new Date(b.watchedAt).getTime() : 0;
         return bDate - aDate; // Descending order
       })
       .slice(0, 5);
