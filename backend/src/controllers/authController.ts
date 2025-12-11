@@ -87,14 +87,19 @@ export const login = async (
     });
 
     if (!user) {
+      console.log(`[LOGIN] User not found: ${validatedData.phone}`);
       throw new AppError('Неверный номер телефона или пароль', 401);
     }
+
+    console.log(`[LOGIN] User found: ${user.firstName} ${user.lastName}, phone: ${user.phone}`);
 
     // Check password
     const isPasswordValid = await bcrypt.compare(
       validatedData.password,
       user.password
     );
+
+    console.log(`[LOGIN] Password check result: ${isPasswordValid}, provided: ${validatedData.password.substring(0, 3)}...`);
 
     if (!isPasswordValid) {
       throw new AppError('Неверный номер телефона или пароль', 401);
