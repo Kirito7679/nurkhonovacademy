@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+*.log
+.DS_Store
+backend/uploads/*
+!backend/uploads/.gitkeep
+*.db
+*.db-journal
+*.zip
+READY_TO_UPLOAD/
+UPLOAD_TO_SERVER/
+
