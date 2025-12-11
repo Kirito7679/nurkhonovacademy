@@ -23,7 +23,8 @@ const httpServer = createServer(app);
 const PORT = process.env.PORT || 5001;
 
 // Trust proxy for Railway (needed for rate limiting behind proxy)
-app.set('trust proxy', true);
+// Railway uses 1 proxy, so we trust only the first proxy
+app.set('trust proxy', 1);
 
 // Initialize Socket.IO
 initializeSocket(httpServer);
