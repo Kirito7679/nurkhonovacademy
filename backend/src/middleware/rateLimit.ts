@@ -10,11 +10,7 @@ export const apiLimiter = rateLimit({
   message: 'Слишком много запросов с этого IP, попробуйте позже',
   standardHeaders: true,
   legacyHeaders: false,
-  // Используем правильный keyGenerator для работы за прокси
-  keyGenerator: (req) => {
-    // Используем X-Forwarded-For если доступен, иначе обычный IP
-    return req.headers['x-forwarded-for']?.toString().split(',')[0] || req.ip || 'unknown';
-  },
+  // Не используем кастомный keyGenerator - библиотека сама правильно обработает IP за прокси
   skip: (req) => {
     // Пропускаем rate limiting для localhost в режиме разработки
     return isDevelopment && (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1');
@@ -37,10 +33,6 @@ export const authLimiter = rateLimit({
   message: 'Слишком много попыток входа. Пожалуйста, попробуйте позже.',
   standardHeaders: true,
   legacyHeaders: false,
-  // Используем правильный keyGenerator для работы за прокси
-  keyGenerator: (req) => {
-    // Используем X-Forwarded-For если доступен, иначе обычный IP
-    return req.headers['x-forwarded-for']?.toString().split(',')[0] || req.ip || 'unknown';
-  },
+  // Не используем кастомный keyGenerator - библиотека сама правильно обработает IP за прокси
 });
 
