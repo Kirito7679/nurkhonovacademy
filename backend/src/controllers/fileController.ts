@@ -9,9 +9,10 @@ import {
   validateFile,
   generateFileName,
   getFilePath,
-  deleteFile,
+  deleteFile as deleteLocalFile,
   ensureUploadDir,
 } from '../services/fileService';
+import { uploadLessonFile as uploadLessonFileToCloudinary, deleteFromCloudinary, extractPublicId } from '../services/cloudinaryService';
 
 // Configure multer
 const storage = multer.diskStorage({
@@ -51,7 +52,7 @@ export const uploadFile = async (
     // Validate file
     const validation = validateFile(req.file);
     if (!validation.valid) {
-      await deleteFile(req.file.filename);
+      await deleteLocalFile(req.file.filename);
       throw new AppError(validation.error!, 400);
     }
 
@@ -64,13 +65,29 @@ export const uploadFile = async (
     });
 
     if (!lesson) {
-      await deleteFile(req.file.filename);
+      await deleteLocalFile(req.file.filename);
       throw new AppError('Урок не найден', 404);
     }
 
     if (lesson.course.teacherId !== req.user!.id && req.user!.role !== 'ADMIN') {
-      await deleteFile(req.file.filename);
+      await deleteLocalFile(req.file.filename);
       throw new AppError('Недостаточно прав для загрузки файлов к этому уроку', 403);
+    }
+
+    // Upload to Cloudinary if configured, otherwise use local storage
+    let fileUrl: string;
+    
+    if (process.env.CLOUDINARY_CLOUD_NAME) {
+      // Upload to Cloudinary
+      const fileBuffer = await fs.readFile(req.file.path);
+      const uploadResult = await uploadLessonFileToCloudinary(fileBuffer, req.file.originalname);
+      fileUrl = uploadResult.secure_url;
+      
+      // Delete local file after upload
+      await deleteLocalFile(req.file.filename);
+    } else {
+      // Use local storage (fallback)
+      fileUrl = `/api/files/download/${req.file.filename}`;
     }
 
     // Create file record
@@ -78,17 +95,19 @@ export const uploadFile = async (
       data: {
         lessonId,
         fileName: req.file.originalname,
-        fileUrl: req.file.filename, // Store filename, we'll use fileId for download
+        fileUrl, // Store Cloudinary URL or local path
         fileSize: req.file.size,
       },
     });
     
-    // Update fileUrl to use fileId
-    const fileUrl = `/api/files/download/${lessonFile.id}`;
-    await prisma.lessonFile.update({
-      where: { id: lessonFile.id },
-      data: { fileUrl },
-    });
+    // Update fileUrl to use fileId if local storage
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      fileUrl = `/api/files/download/${lessonFile.id}`;
+      await prisma.lessonFile.update({
+        where: { id: lessonFile.id },
+        data: { fileUrl },
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -96,7 +115,7 @@ export const uploadFile = async (
     });
   } catch (error) {
     if (req.file) {
-      await deleteFile(req.file.filename);
+      await deleteLocalFile(req.file.filename);
     }
     next(error);
   }
@@ -152,9 +171,16 @@ export const downloadFile = async (
       throw new AppError('У вас нет доступа к этому файлу', 403);
     }
 
-    // Extract filename from fileUrl (it's stored as filename in fileUrl field)
-    const fileName = lessonFile.fileUrl;
-    const filePath = getFilePath(fileName);
+    // Check if file is in Cloudinary or local storage
+    let filePath: string;
+    if (lessonFile.fileUrl.includes('cloudinary.com')) {
+      // File is in Cloudinary - redirect to Cloudinary URL
+      return res.redirect(lessonFile.fileUrl);
+    } else {
+      // Extract filename from fileUrl (it's stored as filename in fileUrl field)
+      const fileName = lessonFile.fileUrl.replace('/api/files/download/', '');
+      filePath = getFilePath(fileName);
+    }
 
     res.download(filePath, lessonFile.fileName, (err) => {
       if (err) {
@@ -239,9 +265,16 @@ export const deleteFileById = async (
       throw new AppError('Недостаточно прав для удаления этого файла', 403);
     }
 
-    // Delete file from disk
-    const fileName = lessonFile.fileUrl; // fileUrl stores the filename
-    await deleteFile(fileName);
+    // Delete file from Cloudinary or local storage
+    if (lessonFile.fileUrl.includes('cloudinary.com')) {
+      const publicId = extractPublicId(lessonFile.fileUrl);
+      if (publicId) {
+        await deleteFromCloudinary(publicId, 'raw');
+      }
+    } else {
+      const fileName = lessonFile.fileUrl.replace('/api/files/download/', '');
+      await deleteLocalFile(fileName);
+    }
 
     // Delete record from database
     await prisma.lessonFile.delete({

@@ -12,6 +12,9 @@ import {
   changePasswordSchema,
 } from '../utils/validation';
 import { upload } from './fileController';
+import { deleteFile } from '../services/fileService';
+import { uploadAvatar as uploadAvatarToCloudinary, deleteFromCloudinary, extractPublicId } from '../services/cloudinaryService';
+import fs from 'fs/promises';
 import { deleteFile, getFilePath } from '../services/fileService';
 
 export const register = async (
@@ -417,24 +420,50 @@ export const uploadAvatar = async (
       where: { id: req.user!.id },
     });
 
-    // Delete old avatar if exists
-    if (currentUser?.avatarUrl) {
-      // Extract filename from URL (format: /api/files/avatar/filename or /api/files/download/filename)
-      let oldFileName = currentUser.avatarUrl.replace('/api/files/avatar/', '');
-      if (oldFileName === currentUser.avatarUrl) {
-        oldFileName = currentUser.avatarUrl.replace('/api/files/download/', '');
-      }
-      if (oldFileName && oldFileName !== currentUser.avatarUrl) {
-        try {
-          await deleteFile(oldFileName);
-        } catch (error) {
-          console.error('Error deleting old avatar:', error);
+    // Upload to Cloudinary if configured, otherwise use local storage
+    let fileUrl: string;
+    
+    if (process.env.CLOUDINARY_CLOUD_NAME) {
+      // Upload to Cloudinary
+      const fileBuffer = await fs.promises.readFile(req.file.path);
+      const uploadResult = await uploadAvatarToCloudinary(fileBuffer);
+      fileUrl = uploadResult.secure_url;
+      
+      // Delete local file after upload
+      await deleteFile(req.file.filename);
+      
+      // Delete old avatar from Cloudinary if exists
+      if (currentUser?.avatarUrl && currentUser.avatarUrl.includes('cloudinary.com')) {
+        const oldPublicId = extractPublicId(currentUser.avatarUrl);
+        if (oldPublicId) {
+          try {
+            await deleteFromCloudinary(oldPublicId);
+          } catch (error) {
+            console.error('Error deleting old avatar from Cloudinary:', error);
+          }
         }
       }
+    } else {
+      // Use local storage (fallback)
+      // Delete old avatar if exists
+      if (currentUser?.avatarUrl) {
+        // Extract filename from URL (format: /api/files/avatar/filename or /api/files/download/filename)
+        let oldFileName = currentUser.avatarUrl.replace('/api/files/avatar/', '');
+        if (oldFileName === currentUser.avatarUrl) {
+          oldFileName = currentUser.avatarUrl.replace('/api/files/download/', '');
+        }
+        if (oldFileName && oldFileName !== currentUser.avatarUrl) {
+          try {
+            await deleteFile(oldFileName);
+          } catch (error) {
+            console.error('Error deleting old avatar:', error);
+          }
+        }
+      }
+      
+      // Use avatar endpoint for the file URL
+      fileUrl = `/api/files/avatar/${req.file.filename}`;
     }
-
-    // Use avatar endpoint for the file URL
-    const fileUrl = `/api/files/avatar/${req.file.filename}`;
     const user = await prisma.user.update({
       where: { id: req.user!.id },
       data: { avatarUrl: fileUrl },
