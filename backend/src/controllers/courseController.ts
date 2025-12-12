@@ -38,6 +38,31 @@ export const getAllCourses = async (
       where.teacherId = req.user.id;
     }
 
+    // For students, filter by visibility: show visible courses OR courses assigned to them
+    if (req.user.role === 'STUDENT') {
+      const studentCourses = await prisma.studentCourse.findMany({
+        where: {
+          studentId: req.user.id,
+        },
+        select: {
+          courseId: true,
+        },
+      });
+
+      const assignedCourseIds = studentCourses.map((sc) => sc.courseId);
+
+      // Show courses where isVisible = true OR where student is assigned
+      if (assignedCourseIds.length > 0) {
+        where.OR = [
+          { isVisible: true },
+          { id: { in: assignedCourseIds } },
+        ];
+      } else {
+        // If no assigned courses, only show visible ones
+        where.isVisible = true;
+      }
+    }
+
     // Build orderBy clause
     let orderBy: any = { createdAt: 'desc' };
     if (sortBy === 'title') {
@@ -96,7 +121,7 @@ export const getAllCourses = async (
           ...course,
           hasAccess,
           studentCourseStatus: studentCourseStatus || null,
-          canRequestAccess: !studentCourseStatus && !hasAccess,
+          canRequestAccess: !studentCourseStatus && !hasAccess && course.isVisible,
           hasTrialAccess,
         };
       });
@@ -145,6 +170,18 @@ export const getCourseById = async (
             firstName: true,
             lastName: true,
             telegram: true,
+          },
+        },
+        modules: {
+          orderBy: {
+            order: 'asc',
+          },
+          include: {
+            lessons: {
+              orderBy: {
+                order: 'asc',
+              },
+            },
           },
         },
         lessons: {
@@ -211,6 +248,7 @@ export const createCourse = async (
         ...validatedData,
         teacherId: req.user!.id,
         trialLessonId: validatedData.trialLessonId || null,
+        isVisible: validatedData.isVisible !== undefined ? validatedData.isVisible : true,
       },
       include: {
         teacher: {
@@ -260,6 +298,7 @@ export const updateCourse = async (
       data: {
         ...validatedData,
         trialLessonId: validatedData.trialLessonId || null,
+        isVisible: validatedData.isVisible !== undefined ? validatedData.isVisible : existingCourse.isVisible,
       },
       include: {
         teacher: {
@@ -331,7 +370,8 @@ export const getCourseLessons = async (
       throw new AppError('Курс не найден', 404);
     }
 
-    // Check access
+    // Check access (but don't block - we'll return lessons anyway)
+    // Allow access if course is visible OR user has approved access OR is the teacher
     let hasAccess = false;
     if (req.user?.role === 'STUDENT') {
       const studentCourse = await prisma.studentCourse.findUnique({
@@ -342,18 +382,21 @@ export const getCourseLessons = async (
           },
         },
       });
-      hasAccess = studentCourse?.status === 'APPROVED';
+      hasAccess = course.isVisible || studentCourse?.status === 'APPROVED' || course.teacherId === req.user.id;
     } else if (req.user?.role === 'TEACHER' || req.user?.role === 'ADMIN') {
-      hasAccess = course.teacherId === req.user.id || req.user.role === 'ADMIN';
-    }
-
-    if (!hasAccess) {
-      throw new AppError('У вас нет доступа к этому курсу', 403);
+      hasAccess = true; // Teachers and admins always have access
     }
 
     const lessons = await prisma.lesson.findMany({
       where: { courseId: id },
       include: {
+        module: {
+          select: {
+            id: true,
+            title: true,
+            order: true,
+          },
+        },
         _count: {
           select: {
             files: true,
@@ -365,9 +408,27 @@ export const getCourseLessons = async (
       },
     });
 
+    // Get student progress only if student has access
+    let lessonsWithProgress = lessons;
+    if (req.user?.role === 'STUDENT' && hasAccess) {
+      const progressMap = await prisma.studentProgress.findMany({
+        where: {
+          studentId: req.user.id,
+          lessonId: {
+            in: lessons.map((l) => l.id),
+          },
+        },
+      });
+
+      lessonsWithProgress = lessons.map((lesson) => ({
+        ...lesson,
+        progress: progressMap.find((p) => p.lessonId === lesson.id) || null,
+      }));
+    }
+
     res.json({
       success: true,
-      data: lessons,
+      data: lessonsWithProgress,
     });
   } catch (error) {
     next(error);
@@ -413,11 +474,19 @@ export const requestCourseAccess = async (
       }
     }
 
+    // If course is free (price = 0), automatically approve access
+    const isFreeCourse = course.price === 0;
+    const courseStatus = isFreeCourse ? 'APPROVED' : 'PENDING';
+
     const studentCourse = await prisma.studentCourse.create({
       data: {
         studentId: req.user!.id,
         courseId: id,
-        status: 'PENDING',
+        status: courseStatus,
+        ...(isFreeCourse && {
+          approvedAt: new Date(),
+          approvedBy: req.user!.id, // Auto-approved by system
+        }),
       },
       include: {
         course: {
@@ -438,13 +507,25 @@ export const requestCourseAccess = async (
       },
     });
 
-    // Create notification for teacher
     // Get student data from database
     const student = await prisma.user.findUnique({
       where: { id: req.user!.id },
       select: { firstName: true, lastName: true },
     });
     
+    if (isFreeCourse) {
+      // For free courses, notify student that access is granted
+      if (student) {
+        await createNotification(
+          req.user!.id,
+          'COURSE_APPROVED',
+          'Доступ к курсу предоставлен',
+          `Вам предоставлен доступ к бесплатному курсу "${course.title}"`,
+          `/courses/${id}`
+        );
+      }
+    } else {
+      // For paid courses, notify teacher about request
     if (student) {
       const studentName = `${student.firstName} ${student.lastName}`;
       await createNotification(
@@ -454,12 +535,13 @@ export const requestCourseAccess = async (
         `${studentName} запросил доступ к курсу "${course.title}"`,
         `/teacher/dashboard`
       );
+      }
     }
 
     res.status(201).json({
       success: true,
       data: studentCourse,
-      message: 'Запрос на доступ отправлен',
+      message: isFreeCourse ? 'Доступ к курсу предоставлен' : 'Запрос на доступ отправлен',
     });
   } catch (error) {
     next(error);
