@@ -209,3 +209,204 @@ export const getTeacherStatistics = async (
   }
 };
 
+// Get new users growth data
+export const getNewUsersGrowth = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { days = 30 } = req.query;
+    const daysCount = parseInt(days as string, 10) || 30;
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysCount);
+    
+    // Get users created in the period, grouped by date
+    const users = await prisma.user.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+        },
+        role: 'STUDENT',
+      },
+      select: {
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+    
+    // Group by date
+    const dateMap = new Map<string, number>();
+    const currentDate = new Date(startDate);
+    
+    // Initialize all dates with 0
+    while (currentDate <= new Date()) {
+      const dateKey = currentDate.toISOString().split('T')[0];
+      dateMap.set(dateKey, 0);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Count users per date
+    users.forEach((user) => {
+      const dateKey = user.createdAt.toISOString().split('T')[0];
+      dateMap.set(dateKey, (dateMap.get(dateKey) || 0) + 1);
+    });
+    
+    // Convert to array format
+    const data = Array.from(dateMap.entries())
+      .map(([date, count]) => ({
+        date,
+        count,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    next(new AppError(`Ошибка при получении данных роста пользователей: ${error?.message || 'Неизвестная ошибка'}`, 500));
+  }
+};
+
+// Get device statistics
+export const getDeviceStatistics = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Get device info from activity logs
+    const activityLogs = await prisma.activityLog.findMany({
+      where: {
+        action: 'LOGIN',
+      },
+      select: {
+        userAgent: true,
+      },
+      distinct: ['userAgent'],
+    });
+    
+    // Parse user agents to determine device type
+    const deviceCounts = {
+      desktop: 0,
+      mobile: 0,
+      tablet: 0,
+      unknown: 0,
+    };
+    
+    activityLogs.forEach((log) => {
+      const ua = (log.userAgent || '').toLowerCase();
+      if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+        deviceCounts.mobile++;
+      } else if (ua.includes('tablet') || ua.includes('ipad')) {
+        deviceCounts.tablet++;
+      } else if (ua.includes('windows') || ua.includes('mac') || ua.includes('linux') || ua.includes('x11')) {
+        deviceCounts.desktop++;
+      } else {
+        deviceCounts.unknown++;
+      }
+    });
+    
+    // Also count by unique users per device type
+    const usersByDevice = await prisma.activityLog.groupBy({
+      by: ['userAgent'],
+      where: {
+        action: 'LOGIN',
+      },
+      _count: {
+        userId: true,
+      },
+    });
+    
+    const deviceStats = {
+      desktop: 0,
+      mobile: 0,
+      tablet: 0,
+      unknown: 0,
+    };
+    
+    usersByDevice.forEach((item) => {
+      const ua = (item.userAgent || '').toLowerCase();
+      const count = item._count.userId;
+      if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+        deviceStats.mobile += count;
+      } else if (ua.includes('tablet') || ua.includes('ipad')) {
+        deviceStats.tablet += count;
+      } else if (ua.includes('windows') || ua.includes('mac') || ua.includes('linux') || ua.includes('x11')) {
+        deviceStats.desktop += count;
+      } else {
+        deviceStats.unknown += count;
+      }
+    });
+    
+    res.json({
+      success: true,
+      data: [
+        { name: 'Десктоп', value: deviceStats.desktop },
+        { name: 'Мобильные', value: deviceStats.mobile },
+        { name: 'Планшеты', value: deviceStats.tablet },
+        { name: 'Неизвестно', value: deviceStats.unknown },
+      ],
+    });
+  } catch (error: any) {
+    next(new AppError(`Ошибка при получении статистики устройств: ${error?.message || 'Неизвестная ошибка'}`, 500));
+  }
+};
+
+// Get active/inactive students statistics
+export const getActiveStudentsStatistics = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { days = 30 } = req.query;
+    const daysCount = parseInt(days as string, 10) || 30;
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysCount);
+    
+    // Get all students
+    const allStudents = await prisma.user.findMany({
+      where: {
+        role: 'STUDENT',
+      },
+      select: {
+        id: true,
+      },
+    });
+    
+    // Get students who logged in within the period
+    const activeStudentIds = await prisma.activityLog.findMany({
+      where: {
+        action: 'LOGIN',
+        createdAt: {
+          gte: cutoffDate,
+        },
+      },
+      select: {
+        userId: true,
+      },
+      distinct: ['userId'],
+    });
+    
+    const activeIds = new Set(activeStudentIds.map((log) => log.userId));
+    const activeCount = activeIds.size;
+    const inactiveCount = allStudents.length - activeCount;
+    
+    res.json({
+      success: true,
+      data: [
+        { name: 'Активные', value: activeCount },
+        { name: 'Неактивные', value: inactiveCount },
+      ],
+    });
+  } catch (error: any) {
+    next(new AppError(`Ошибка при получении статистики активности студентов: ${error?.message || 'Неизвестная ошибка'}`, 500));
+  }
+};
+
