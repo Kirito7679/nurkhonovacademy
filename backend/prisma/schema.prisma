@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -19,7 +19,8 @@ model User {
   password  String
   avatarUrl String?
   telegram  String?  // Telegram username or link
-  role      String   @default("STUDENT") // STUDENT, TEACHER, ADMIN
+  role      String   @default("STUDENT") // STUDENT, TEACHER, ADMIN, MODERATOR, ASSISTANT
+  language  String   @default("ru") // ru, en, uz - язык интерфейса
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -29,6 +30,13 @@ model User {
   progress         StudentProgress[]
   comments         Comment[]
   notifications    Notification[]
+  quizResults      QuizResult[]
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+  activityLogs     ActivityLog[]
+  flashcardDecks   FlashcardDeck[]
+  flashcardProgress FlashcardProgress[]
+  practiceResults  PracticeResult[]
 
   @@map("users")
 }
@@ -41,20 +49,42 @@ model Course {
   price         Float    @default(0)
   trialLessonId String?
   teacherId     String
+  isVisible     Boolean  @default(true) // Видим ли курс для студентов (если false, виден только назначенным студентам)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
   teacher       User            @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  modules       Module[]
   lessons       Lesson[]
   studentCourses StudentCourse[]
+  flashcardDecks FlashcardDeck[]
+  integrations  ExternalIntegration[]
 
   @@map("courses")
+}
+
+model Module {
+  id          String   @id @default(uuid())
+  courseId    String
+  title       String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+
+  @@map("modules")
+  @@index([courseId])
 }
 
 model Lesson {
   id          String   @id @default(uuid())
   courseId    String
+  moduleId    String?  // Optional for backward compatibility
   title       String
   description String?
   order       Int      @default(0)
@@ -64,12 +94,18 @@ model Lesson {
 
   // Relations
   course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module      Module?          @relation(fields: [moduleId], references: [id], onDelete: SetNull)
   files       LessonFile[]
   progress    StudentProgress[]
   comments    Comment[]
+  quiz        Quiz?
+  flashcardDecks FlashcardDeck[]
+  practiceExercises PracticeExercise[]
+  integrations  ExternalIntegration[]
 
   @@map("lessons")
   @@index([courseId])
+  @@index([moduleId])
 }
 
 model LessonFile {
@@ -164,5 +200,256 @@ model Notification {
   @@index([userId])
   @@index([read])
   @@index([createdAt])
+}
+
+model Quiz {
+  id          String   @id @default(uuid())
+  lessonId    String   @unique
+  title       String?
+  description String?
+  passingScore Int      @default(70) // Minimum score percentage to pass
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  lesson      Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions   QuizQuestion[]
+  results     QuizResult[]
+
+  @@map("quizzes")
+  @@index([lessonId])
+}
+
+model QuizQuestion {
+  id          String   @id @default(uuid())
+  quizId      String
+  question    String
+  type        String   @default("MULTIPLE_CHOICE") // MULTIPLE_CHOICE, TRUE_FALSE, DRAG_DROP, MATCHING, FILL_BLANK
+  order       Int      @default(0)
+  metadata    String?  // JSON string for complex question data (drag-drop items, matching pairs, etc.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  quiz        Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options     QuizOption[]
+  correctAnswer String?      // For TRUE_FALSE: "true" or "false", for others: JSON string
+
+  @@map("quiz_questions")
+  @@index([quizId])
+}
+
+model QuizOption {
+  id          String   @id @default(uuid())
+  questionId  String
+  text        String
+  isCorrect   Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  question    QuizQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_options")
+  @@index([questionId])
+}
+
+model QuizResult {
+  id          String   @id @default(uuid())
+  quizId      String
+  studentId   String
+  score       Int      // Percentage score
+  passed      Boolean  @default(false)
+  answers     String   // JSON string of student answers
+  completedAt DateTime @default(now())
+
+  // Relations
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_results")
+  @@index([quizId])
+  @@index([studentId])
+  @@index([completedAt])
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  senderId    String
+  receiverId  String
+  content     String
+  fileUrl     String?  // URL to attached file
+  fileName    String?  // Original filename
+  fileSize    Int?     // File size in bytes
+  read        Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+  @@index([senderId, receiverId])
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, VIEW, etc.
+  entityType  String?  // COURSE, LESSON, USER, etc.
+  entityId    String?  // ID of the affected entity
+  details     String?  // JSON string with additional details
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model FlashcardDeck {
+  id          String   @id @default(uuid())
+  courseId    String?
+  lessonId    String?
+  title       String
+  description String?
+  createdBy   String
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  course      Course?          @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  lesson      Lesson?          @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  creator     User             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  flashcards  Flashcard[]
+  progress    FlashcardProgress[]
+
+  @@map("flashcard_decks")
+  @@index([courseId])
+  @@index([lessonId])
+  @@index([createdBy])
+}
+
+model Flashcard {
+  id          String   @id @default(uuid())
+  deckId      String
+  front       String   // Front side of the card
+  back        String   // Back side of the card
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  deck        FlashcardDeck    @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  progress    FlashcardProgress[]
+
+  @@map("flashcards")
+  @@index([deckId])
+}
+
+model FlashcardProgress {
+  id          String   @id @default(uuid())
+  userId      String
+  deckId      String
+  cardId      String
+  difficulty  String   @default("NEW") // NEW, EASY, MEDIUM, HARD
+  lastReviewed DateTime?
+  nextReview  DateTime?
+  reviewCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck        FlashcardDeck    @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  card        Flashcard        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardId])
+  @@map("flashcard_progress")
+  @@index([userId])
+  @@index([deckId])
+  @@index([cardId])
+  @@index([nextReview])
+}
+
+model PracticeExercise {
+  id          String   @id @default(uuid())
+  lessonId    String
+  title       String
+  description String?
+  type        String   // CODING, WRITING, SPEAKING, LISTENING, etc.
+  instructions String
+  solution    String?  // Expected solution or answer
+  autoCheck   Boolean  @default(false) // Can be automatically checked
+  maxAttempts Int      @default(3)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  lesson      Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  results     PracticeResult[]
+
+  @@map("practice_exercises")
+  @@index([lessonId])
+}
+
+model PracticeResult {
+  id          String   @id @default(uuid())
+  exerciseId  String
+  studentId   String
+  answer      String   // Student's answer
+  score       Int?     // Score if auto-checked
+  feedback    String?  // Automated or manual feedback
+  status      String   @default("SUBMITTED") // SUBMITTED, REVIEWED, APPROVED, REJECTED
+  reviewedBy  String?  // Teacher/Moderator who reviewed
+  reviewedAt  DateTime?
+  attemptNumber Int    @default(1)
+  submittedAt DateTime @default(now())
+
+  // Relations
+  exercise    PracticeExercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  student     User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("practice_results")
+  @@index([exerciseId])
+  @@index([studentId])
+  @@index([status])
+  @@index([submittedAt])
+}
+
+model ExternalIntegration {
+  id          String   @id @default(uuid())
+  userId      String?
+  courseId    String?
+  lessonId    String?
+  type        String   // GOOGLE_DOCS, QUIZLET, YOUTUBE, etc.
+  externalId  String   // ID in external service
+  externalUrl String   // URL to external resource
+  metadata    String?  // JSON string with additional data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  lesson      Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@map("external_integrations")
+  @@index([userId])
+  @@index([courseId])
+  @@index([lessonId])
+  @@index([type])
 }
 
