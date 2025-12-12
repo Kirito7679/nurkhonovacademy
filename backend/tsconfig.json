@@ -16,7 +16,20 @@
     "sourceMap": true,
     "noEmitOnError": false
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/controllers/backupController.ts", "src/controllers/exerciseController.ts", "src/controllers/studentController.ts"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/controllers/backupController.ts",
+    "src/controllers/exerciseController.ts",
+    "src/controllers/studentController.ts"
+  ],
+  "ts-node": {
+    "skipIgnore": false
+  }
 }
 
