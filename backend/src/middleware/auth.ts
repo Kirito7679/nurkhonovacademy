@@ -20,6 +20,7 @@ export const authenticate = async (
     const token = req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
+      console.log(`❌ Auth failed: No token provided for ${req.method} ${req.path}`);
       throw new AppError('Токен не предоставлен', 401);
     }
 
