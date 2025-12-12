@@ -144,7 +144,9 @@ export const createModule = async (
 
     const module = await prisma.module.create({
       data: {
-        ...validatedData,
+        title: validatedData.title,
+        description: validatedData.description,
+        order: validatedData.order,
         courseId,
       },
       include: {
@@ -199,7 +201,11 @@ export const updateModule = async (
 
     const module = await prisma.module.update({
       where: { id },
-      data: validatedData,
+      data: {
+        title: validatedData.title,
+        description: validatedData.description,
+        order: validatedData.order,
+      },
       include: {
         course: {
           select: {
