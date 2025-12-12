@@ -12,10 +12,9 @@ import {
   changePasswordSchema,
 } from '../utils/validation';
 import { upload } from './fileController';
-import { deleteFile } from '../services/fileService';
 import { uploadAvatar as uploadAvatarToCloudinary, deleteFromCloudinary, extractPublicId } from '../services/cloudinaryService';
+import { deleteFile as deleteLocalFile } from '../services/fileService';
 import fs from 'fs/promises';
-import { deleteFile, getFilePath } from '../services/fileService';
 
 export const register = async (
   req: AuthRequest,
