@@ -5,7 +5,7 @@ import { createServer } from 'http';
 import authRoutes from './routes/authRoutes';
 import courseRoutes from './routes/courseRoutes';
 import lessonRoutes from './routes/lessonRoutes';
-// import studentRoutes from './routes/studentRoutes'; // Temporarily disabled - controller has errors
+import studentRoutes from './routes/studentRoutes';
 import fileRoutes from './routes/fileRoutes';
 import commentRoutes from './routes/commentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
@@ -72,7 +72,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/lessons', lessonRoutes);
-// app.use('/api/students', studentRoutes); // Temporarily disabled - controller has errors
+app.use('/api/students', studentRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);

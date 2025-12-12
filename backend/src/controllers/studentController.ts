@@ -787,7 +787,8 @@ export const deleteStudent = async (
           select: {
             studentCourses: true,
             progress: true,
-            messages: true,
+            sentMessages: true,
+            receivedMessages: true,
             comments: true,
           },
         },
@@ -799,10 +800,11 @@ export const deleteStudent = async (
     }
 
     // Check if student has any important data
+    const totalMessages = (student._count.sentMessages || 0) + (student._count.receivedMessages || 0);
     const hasData = 
       student._count.studentCourses > 0 ||
       student._count.progress > 0 ||
-      student._count.messages > 0 ||
+      totalMessages > 0 ||
       student._count.comments > 0;
 
     if (hasData) {
