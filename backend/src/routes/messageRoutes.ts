@@ -17,7 +17,7 @@ const router = Router();
 // Get teacher's chat list (students)
 router.get('/teacher/chats', authenticate, requireRole('TEACHER', 'ADMIN'), getTeacherChats);
 
-// Get student's teacher
+// Get student's teacher (must be before /chat/:userId to avoid route conflict)
 router.get('/student/teacher', authenticate, requireRole('STUDENT'), getStudentTeacher);
 
 // Get messages with specific user
@@ -32,7 +32,7 @@ router.get('/files/:fileName', authenticate, downloadMessageFile);
 // Send a message
 router.post('/send', authenticate, sendMessage);
 
-// Delete a message
+// Delete a message (must be last to avoid conflicts with other routes)
 router.delete('/:messageId', authenticate, deleteMessage);
 
 export default router;
