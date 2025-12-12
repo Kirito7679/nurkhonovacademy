@@ -196,7 +196,9 @@ export default function Profile() {
             >
               {userResponse?.avatarUrl ? (
                 <img
-                  src={`http://localhost:5001${userResponse.avatarUrl}`}
+                  src={userResponse.avatarUrl?.startsWith('http') 
+                    ? userResponse.avatarUrl 
+                    : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://api.academy.dilmurodnurkhonov.uz'}${userResponse.avatarUrl}`}
                   alt={`${userResponse.firstName} ${userResponse.lastName}`}
                   className="w-full h-full object-cover"
                   onError={(e) => {

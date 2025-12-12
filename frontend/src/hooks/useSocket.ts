@@ -3,7 +3,24 @@ import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 import { useQueryClient } from 'react-query';
 
-const SOCKET_URL = 'http://localhost:5001';
+// Get Socket.IO URL from environment or use API_BASE_URL
+// Socket.IO doesn't use /api prefix, so we need to remove it if present
+const getSocketUrl = (): string => {
+  const envApiUrl = import.meta.env.VITE_API_URL;
+  const apiBaseUrl = envApiUrl || 'http://localhost:5001/api';
+  
+  // Remove /api suffix if present, Socket.IO doesn't need it
+  const baseUrl = apiBaseUrl.replace(/\/api$/, '');
+  
+  // If it's still localhost in production, use production API URL
+  if (baseUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+    return 'https://api.academy.dilmurodnurkhonov.uz';
+  }
+  
+  return baseUrl;
+};
+
+const SOCKET_URL = getSocketUrl();
 
 export const useSocket = () => {
   const { token } = useAuthStore();
