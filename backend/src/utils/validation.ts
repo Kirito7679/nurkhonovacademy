@@ -17,6 +17,7 @@ export const updateProfileSchema = z.object({
   lastName: z.string().min(1).optional(),
   phone: z.string().min(10).optional(),
   email: z.string().email().optional().or(z.literal('')),
+  language: z.enum(['ru', 'en', 'uz']).optional(),
 });
 
 export const changePasswordSchema = z.object({
@@ -30,10 +31,18 @@ export const courseSchema = z.object({
   thumbnailUrl: z.string().url().optional().or(z.literal('')),
   price: z.number().min(0).default(0),
   trialLessonId: z.string().uuid().optional().or(z.literal('')),
+  isVisible: z.boolean().optional().default(true),
+});
+
+export const moduleSchema = z.object({
+  title: z.string().min(1, 'Название модуля обязательно'),
+  description: z.string().optional(),
+  order: z.number().int().min(0).default(0),
 });
 
 export const lessonSchema = z.object({
   courseId: z.string().uuid('Неверный ID курса'),
+  moduleId: z.string().uuid('Неверный ID модуля').optional().or(z.literal('')),
   title: z.string().min(1, 'Название урока обязательно'),
   description: z.string().optional(),
   order: z.number().int().min(0).default(0),
