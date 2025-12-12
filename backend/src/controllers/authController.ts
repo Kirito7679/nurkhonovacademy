@@ -404,14 +404,14 @@ export const uploadAvatar = async (
     // Validate file type (only images)
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(req.file.mimetype)) {
-      await deleteFile(req.file.filename);
+      await deleteLocalFile(req.file.filename);
       throw new AppError('Разрешены только изображения (JPEG, PNG, GIF, WebP)', 400);
     }
 
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (req.file.size > maxSize) {
-      await deleteFile(req.file.filename);
+      await deleteLocalFile(req.file.filename);
       throw new AppError('Размер файла не должен превышать 5MB', 400);
     }
 
@@ -425,12 +425,12 @@ export const uploadAvatar = async (
     
     if (process.env.CLOUDINARY_CLOUD_NAME) {
       // Upload to Cloudinary
-      const fileBuffer = await fs.promises.readFile(req.file.path);
+      const fileBuffer = await fs.readFile(req.file.path);
       const uploadResult = await uploadAvatarToCloudinary(fileBuffer);
       fileUrl = uploadResult.secure_url;
       
       // Delete local file after upload
-      await deleteFile(req.file.filename);
+      await deleteLocalFile(req.file.filename);
       
       // Delete old avatar from Cloudinary if exists
       if (currentUser?.avatarUrl && currentUser.avatarUrl.includes('cloudinary.com')) {
@@ -454,7 +454,7 @@ export const uploadAvatar = async (
         }
         if (oldFileName && oldFileName !== currentUser.avatarUrl) {
           try {
-            await deleteFile(oldFileName);
+            await deleteLocalFile(oldFileName);
           } catch (error) {
             console.error('Error deleting old avatar:', error);
           }
@@ -488,7 +488,7 @@ export const uploadAvatar = async (
   } catch (error) {
     console.error('Error uploading avatar:', error);
     if (req.file) {
-      await deleteFile(req.file.filename);
+      await deleteLocalFile(req.file.filename);
     }
     next(error);
   }
