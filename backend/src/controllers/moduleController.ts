@@ -20,7 +20,7 @@ export const getCourseModules = async (
       throw new AppError('Курс не найден', 404);
     }
 
-    // Check permission
+    // Check permission - allow access if course is visible or user has access
     if (req.user?.role === 'STUDENT') {
       const studentCourse = await prisma.studentCourse.findUnique({
         where: {
@@ -30,13 +30,13 @@ export const getCourseModules = async (
           },
         },
       });
-      if (studentCourse?.status !== 'APPROVED' && course.teacherId !== req.user.id) {
+      // Allow if course is visible OR student has approved access OR is the teacher
+      if (!course.isVisible && studentCourse?.status !== 'APPROVED' && course.teacherId !== req.user.id) {
         throw new AppError('У вас нет доступа к этому курсу', 403);
       }
     } else if (req.user?.role === 'TEACHER' || req.user?.role === 'ADMIN') {
-      if (course.teacherId !== req.user.id && req.user.role !== 'ADMIN') {
-        throw new AppError('Недостаточно прав для просмотра модулей этого курса', 403);
-      }
+      // Teachers and admins can always view modules
+      // No additional check needed
     }
 
     const modules = await prisma.module.findMany({
