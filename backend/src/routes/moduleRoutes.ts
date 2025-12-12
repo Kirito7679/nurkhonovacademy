@@ -14,10 +14,10 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// Get all modules for a course
+// Get all modules for a course (must be before /:id to avoid route conflict)
 router.get('/courses/:courseId/modules', getCourseModules);
 
-// Get module by ID
+// Get module by ID (must be after specific routes)
 router.get('/:id', getModuleById);
 
 // Create module (only teachers and admins)
