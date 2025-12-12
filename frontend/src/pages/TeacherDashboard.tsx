@@ -3,15 +3,14 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { ApiResponse, Course, User, StudentCourse } from '../types';
-import { Users, BookOpen, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Users, BookOpen } from 'lucide-react';
 
 export default function TeacherDashboard() {
   const { t } = useTranslation();
   const { data: statsResponse } = useQuery('teacherStats', async () => {
-    const [studentsRes, coursesRes, requestsRes] = await Promise.all([
+    const [studentsRes, coursesRes] = await Promise.all([
       api.get<ApiResponse<User[]>>('/students'),
       api.get<ApiResponse<Course[]>>('/courses'),
-      api.get<ApiResponse<StudentCourse[]>>('/students'),
     ]);
 
     const students = studentsRes.data.data || [];

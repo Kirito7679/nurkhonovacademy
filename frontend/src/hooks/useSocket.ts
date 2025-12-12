@@ -55,7 +55,7 @@ export const useSocket = () => {
 
     socket.on('error', (error) => {
       // Handle socket errors silently in production
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.error('Socket error:', error);
       }
     });
