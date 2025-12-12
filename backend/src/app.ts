@@ -11,6 +11,13 @@ import commentRoutes from './routes/commentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import statisticsRoutes from './routes/statisticsRoutes';
 import exportRoutes from './routes/exportRoutes';
+import quizRoutes from './routes/quizRoutes';
+import messageRoutes from './routes/messageRoutes';
+import moduleRoutes from './routes/moduleRoutes';
+import flashcardRoutes from './routes/flashcardRoutes';
+import practiceRoutes from './routes/practiceRoutes';
+import integrationRoutes from './routes/integrationRoutes';
+import activityLogRoutes from './routes/activityLogRoutes';
 import { errorHandler } from './utils/errors';
 import { ensureUploadDir } from './services/fileService';
 import { apiLimiter } from './middleware/rateLimit';
@@ -29,8 +36,23 @@ app.set('trust proxy', 1);
 // Initialize Socket.IO
 initializeSocket(httpServer);
 
+// CORS configuration
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -53,6 +75,32 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/modules', moduleRoutes);
+app.use('/api/flashcards', flashcardRoutes);
+app.use('/api/practice', practiceRoutes);
+app.use('/api/integrations', integrationRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
+
+// Log registered routes for debugging
+console.log('✅ Routes registered:');
+console.log('  - /api/auth');
+console.log('  - /api/courses');
+console.log('  - /api/lessons');
+console.log('  - /api/students');
+console.log('  - /api/files');
+console.log('  - /api/comments');
+console.log('  - /api/notifications');
+console.log('  - /api/statistics');
+console.log('  - /api/export');
+console.log('  - /api/quizzes');
+console.log('  - /api/messages');
+console.log('  - /api/modules');
+console.log('  - /api/flashcards');
+console.log('  - /api/practice');
+console.log('  - /api/integrations');
+console.log('  - /api/activity-logs');
 
 // Health check
 app.get('/api/health', (req, res) => {
