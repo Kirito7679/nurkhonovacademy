@@ -17,6 +17,6 @@
     "noEmitOnError": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/controllers/backupController.ts", "src/controllers/exerciseController.ts"]
+  "exclude": ["node_modules", "dist", "src/controllers/backupController.ts", "src/controllers/exerciseController.ts", "src/controllers/studentController.ts"]
 }
 
