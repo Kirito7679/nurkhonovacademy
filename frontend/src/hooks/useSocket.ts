@@ -29,15 +29,18 @@ export const useSocket = () => {
     });
 
     socket.on('connect', () => {
-      console.log('Connected to socket server');
+      // Socket connected successfully
     });
 
     socket.on('disconnect', () => {
-      console.log('Disconnected from socket server');
+      // Socket disconnected
     });
 
     socket.on('error', (error) => {
-      console.error('Socket error:', error);
+      // Handle socket errors silently in production
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Socket error:', error);
+      }
     });
 
     return () => {
@@ -47,4 +50,9 @@ export const useSocket = () => {
 
   return socketRef.current;
 };
+
+
+
+
+
 

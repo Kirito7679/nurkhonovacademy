@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from 'react-query'
 import App from './App.tsx'
 import ErrorBoundary from './components/ErrorBoundary.tsx'
+import './i18n/config'
 import './index.css'
 
 const queryClient = new QueryClient({

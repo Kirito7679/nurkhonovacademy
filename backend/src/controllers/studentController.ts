@@ -215,6 +215,17 @@ export const updateStudent = async (
       throw new AppError('Студент не найден', 404);
     }
 
+    // If admin is trying to update, only allow password reset (which is handled by resetStudentPassword endpoint)
+    // Admins should not be able to change student profile data
+    if (req.user?.role === 'ADMIN' || req.user?.role === 'TEACHER') {
+      throw new AppError('Администраторы и преподаватели могут изменять только пароль студента. Для изменения профиля студент должен войти в свой аккаунт.', 403);
+    }
+
+    // Only students can update their own profile
+    if (req.user?.id !== id) {
+      throw new AppError('Вы можете изменять только свой профиль', 403);
+    }
+
     // Check if phone is being changed and if it's already taken
     if (validatedData.phone && validatedData.phone !== student.phone) {
       const existingUser = await prisma.user.findUnique({
@@ -750,6 +761,63 @@ export const getStudentProgress = async (
     res.json({
       success: true,
       data: progress,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteStudent = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    // Only ADMIN can delete students
+    if (req.user!.role !== 'ADMIN') {
+      throw new AppError('Только администраторы могут удалять студентов', 403);
+    }
+
+    const student = await prisma.user.findUnique({
+      where: { id, role: 'STUDENT' },
+      include: {
+        _count: {
+          select: {
+            studentCourses: true,
+            progress: true,
+            messages: true,
+            comments: true,
+          },
+        },
+      },
+    });
+
+    if (!student) {
+      throw new AppError('Студент не найден', 404);
+    }
+
+    // Check if student has any important data
+    const hasData = 
+      student._count.studentCourses > 0 ||
+      student._count.progress > 0 ||
+      student._count.messages > 0 ||
+      student._count.comments > 0;
+
+    if (hasData) {
+      // For safety, we could implement soft delete or require confirmation
+      // For now, we'll delete with cascade (Prisma will handle related records)
+    }
+
+    // Delete student (cascade will handle related records)
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    res.json({
+      success: true,
+      message: 'Студент успешно удален',
     });
   } catch (error) {
     next(error);

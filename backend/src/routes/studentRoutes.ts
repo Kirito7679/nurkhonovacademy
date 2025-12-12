@@ -9,6 +9,7 @@ import {
   assignCourse,
   detachCourse,
   getStudentProgress,
+  deleteStudent,
 } from '../controllers/studentController';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roleCheck';
@@ -27,6 +28,7 @@ router.get('/:id/progress', getStudentProgress);
 router.put('/:id/courses/:courseId', approveCourseAccess);
 router.post('/:id/courses/:courseId', assignCourse);
 router.delete('/:id/courses/:courseId', detachCourse);
+router.delete('/:id', requireRole('ADMIN'), deleteStudent);
 
 export default router;
 

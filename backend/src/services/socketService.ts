@@ -21,9 +21,9 @@ export const initializeSocket = (httpServer: HttpServer) => {
         return next(new Error('Authentication error'));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { userId: string };
       const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
+        where: { id: decoded.userId },
         select: { id: true, role: true },
       });
 
@@ -46,6 +46,17 @@ export const initializeSocket = (httpServer: HttpServer) => {
     // Join user's personal room
     socket.join(`user:${userId}`);
 
+    // Join lesson room when viewing a lesson
+    socket.on('join-lesson', (lessonId: string) => {
+      socket.join(`lesson:${lessonId}`);
+      console.log(`User ${userId} joined lesson ${lessonId}`);
+    });
+
+    socket.on('leave-lesson', (lessonId: string) => {
+      socket.leave(`lesson:${lessonId}`);
+      console.log(`User ${userId} left lesson ${lessonId}`);
+    });
+
     socket.on('disconnect', () => {
       console.log(`User ${userId} disconnected from socket`);
     });
@@ -60,10 +71,18 @@ export const emitNotification = (userId: string, notification: any) => {
   }
 };
 
+export const emitCommentUpdate = (lessonId: string, comment: any) => {
+  if (io) {
+    // Emit to all users viewing this lesson
+    io.to(`lesson:${lessonId}`).emit('new-comment', comment);
+  }
+};
+
 export const getIO = () => {
   if (!io) {
     throw new Error('Socket.IO not initialized');
   }
   return io;
 };
+
 

@@ -68,10 +68,58 @@ export const createStudentSchema = z.object({
   password: z.string().min(6, 'Пароль должен содержать минимум 6 символов').optional(),
 });
 
-// YouTube URL validation helper
+// Video URL validation helper (supports multiple sources)
+export const validateVideoUrl = (url: string): boolean => {
+  if (!url) return true; // Empty URL is valid (optional field)
+  
+  const lowerUrl = url.toLowerCase();
+  
+  // YouTube
+  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+    return youtubeRegex.test(url);
+  }
+  
+  // Vimeo
+  if (lowerUrl.includes('vimeo.com')) {
+    const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+    return vimeoRegex.test(url);
+  }
+  
+  // Google Drive
+  if (lowerUrl.includes('drive.google.com')) {
+    const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
+    return driveRegex.test(url);
+  }
+  
+  // VK
+  if (lowerUrl.includes('vk.com/video')) {
+    const vkRegex = /vk\.com\/video(-?\d+_\d+)/;
+    return vkRegex.test(url);
+  }
+  
+  // Direct video URLs (mp4, webm, etc.)
+  if (/\.(mp4|webm|ogg|mov|avi|wmv|flv)(\?.*)?$/i.test(url)) {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  
+  // Other URLs - validate as URL
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Legacy function for backward compatibility
 export const validateYouTubeUrl = (url: string): boolean => {
-  const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
-  return youtubeRegex.test(url);
+  return validateVideoUrl(url);
 };
 
 export const extractYouTubeVideoId = (url: string): string | null => {

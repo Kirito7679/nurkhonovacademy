@@ -1,5 +1,6 @@
 import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { Course, ApiResponse } from '../types';
 import { BookOpen, Clock, CheckCircle, TrendingUp, Award, PlayCircle } from 'lucide-react';
@@ -27,6 +28,7 @@ interface StudentStats {
 }
 
 export default function StudentDashboard() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   
   const { data: coursesResponse, isLoading: coursesLoading } = useQuery('myCourses', async () => {
@@ -55,97 +57,94 @@ export default function StudentDashboard() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Доброе утро';
-    if (hour < 18) return 'Добрый день';
-    return 'Добрый вечер';
+    if (hour < 12) return t('dashboard.goodMorning', { defaultValue: 'Доброе утро' });
+    if (hour < 18) return t('dashboard.goodAfternoon', { defaultValue: 'Добрый день' });
+    return t('dashboard.goodEvening', { defaultValue: 'Добрый вечер' });
   };
 
   return (
-    <div className="code-bg particle-bg">
+    <div>
       {/* Greeting Section */}
       <div className="mb-8 animate-slide-in">
-        <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-gradient neon-glow font-mono mb-2">
-          <span className="text-[#39ff14]">console.log</span>
-          <span className="text-white">(</span>
-          <span className="text-[#00ff88]">'{getGreeting()}, {user?.firstName}!'</span>
-          <span className="text-white">)</span>;
+        <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-gradient mb-2">
+          {getGreeting()}, {user?.firstName}!
         </h1>
-        <p className="text-gray-400 font-mono text-sm md:text-base lg:text-lg">
-          <span className="text-gray-600">//</span> Добро пожаловать в вашу образовательную платформу
+        <p className="text-primary-700 text-sm md:text-base lg:text-lg font-medium">
+          {t('dashboard.welcome')}
         </p>
       </div>
 
       {/* Statistics Cards */}
       {!statsLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-          <div className="card p-6 animate-fade-scale" style={{ animationDelay: '0.1s' }}>
+          <div className="card p-6 animate-fade-scale bg-gradient-to-br from-primary-50 to-blue-50" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm font-mono mb-1">
-                  <span className="text-[#39ff14]">const</span> totalCourses
+                <p className="text-primary-700 text-sm mb-1 font-semibold">
+                  {t('dashboard.totalCourses', { defaultValue: 'Всего курсов' })}
                 </p>
-                <p className="text-2xl md:text-3xl font-bold text-white font-mono">
-                  <span className="text-[#00ff88]">{stats.totalCourses}</span>
+                <p className="text-2xl md:text-3xl font-bold text-primary-900">
+                  {stats.totalCourses}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                <BookOpen className="h-6 w-6 text-black" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
+                <BookOpen className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="card p-6 animate-fade-scale" style={{ animationDelay: '0.2s' }}>
+          <div className="card p-6 animate-fade-scale bg-gradient-to-br from-accent-50 to-emerald-50" style={{ animationDelay: '0.2s' }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm font-mono mb-1">
-                  <span className="text-[#39ff14]">const</span> completedLessons
+                <p className="text-accent-700 text-sm mb-1 font-semibold">
+                  {t('dashboard.completedLessons', { defaultValue: 'Завершено уроков' })}
                 </p>
-                <p className="text-2xl md:text-3xl font-bold text-white font-mono">
-                  <span className="text-[#00ff88]">{stats.completedLessons}</span>
-                  <span className="text-gray-500 text-lg">/{stats.totalLessons}</span>
+                <p className="text-2xl md:text-3xl font-bold text-accent-900">
+                  {stats.completedLessons}
+                  <span className="text-accent-600 text-lg">/{stats.totalLessons}</span>
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-black" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-accent flex items-center justify-center shadow-glow">
+                <CheckCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="card p-6 animate-fade-scale" style={{ animationDelay: '0.3s' }}>
+          <div className="card p-6 animate-fade-scale bg-gradient-to-br from-education-50 to-purple-50" style={{ animationDelay: '0.3s' }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm font-mono mb-1">
-                  <span className="text-[#39ff14]">const</span> overallProgress
+                <p className="text-education-700 text-sm mb-1 font-semibold">
+                  {t('dashboard.overallProgress', { defaultValue: 'Общий прогресс' })}
                 </p>
-                <p className="text-2xl md:text-3xl font-bold text-white font-mono">
-                  <span className="text-[#00ff88]">{stats.overallProgress}</span>
-                  <span className="text-gray-500 text-lg">%</span>
+                <p className="text-2xl md:text-3xl font-bold text-education-900">
+                  {stats.overallProgress}
+                  <span className="text-education-600 text-lg">%</span>
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-black" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-education flex items-center justify-center shadow-glow">
+                <TrendingUp className="h-7 w-7 text-white" />
               </div>
             </div>
-            <div className="mt-4 w-full bg-[#1f2937] rounded-full h-2 overflow-hidden">
+            <div className="mt-4 w-full bg-primary-200 rounded-full h-3 overflow-hidden shadow-inner">
               <div
-                className="bg-gradient-primary h-full transition-all duration-500"
+                className="bg-gradient-education h-full transition-all duration-500 shadow-sm"
                 style={{ width: `${stats.overallProgress}%` }}
               ></div>
             </div>
           </div>
 
-          <div className="card p-6 animate-fade-scale" style={{ animationDelay: '0.4s' }}>
+          <div className="card p-6 animate-fade-scale bg-gradient-to-br from-primary-50 to-indigo-50" style={{ animationDelay: '0.4s' }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm font-mono mb-1">
-                  <span className="text-[#39ff14]">const</span> inProgress
+                <p className="text-primary-700 text-sm mb-1 font-semibold">
+                  В процессе
                 </p>
-                <p className="text-2xl md:text-3xl font-bold text-white font-mono">
-                  <span className="text-[#00ff88]">{stats.inProgressLessons}</span>
+                <p className="text-2xl md:text-3xl font-bold text-primary-900">
+                  {stats.inProgressLessons}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                <PlayCircle className="h-6 w-6 text-black" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
+                <PlayCircle className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -156,31 +155,31 @@ export default function StudentDashboard() {
       {!statsLoading && stats.recentActivity.length > 0 && (
         <div className="card p-6 mb-8 animate-fade-scale">
           <div className="flex items-center mb-6">
-            <Clock className="h-6 w-6 text-[#39ff14] mr-3 animate-pulse-glow" />
-            <h2 className="text-lg md:text-xl lg:text-2xl font-semibold text-white font-mono">
-              <span className="text-[#39ff14]">const</span> recentActivity <span className="text-[#39ff14]">=</span> <span className="text-white">[]</span>;
+            <Clock className="h-6 w-6 text-primary-600 mr-3" />
+            <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-primary-900">
+              {t('dashboard.recentActivity')}
             </h2>
           </div>
           <div className="space-y-3">
             {stats.recentActivity.map((activity, index) => (
               <div
                 key={activity.id}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 md:p-4 bg-[#1f2937]/50 rounded-lg border border-[#374151] hover:border-[#39ff14]/50 transition-all animate-slide-in"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 md:p-4 bg-gradient-to-r from-primary-50/50 to-transparent rounded-lg border-2 border-primary-200 hover:border-primary-400 transition-all animate-slide-in"
                 style={{ animationDelay: `${0.1 * index}s` }}
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="h-5 w-5 text-black" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-accent flex items-center justify-center flex-shrink-0 shadow-glow">
+                  <CheckCircle className="h-6 w-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium font-mono break-words text-sm md:text-base">
-                    <span className="text-[#39ff14]">lesson</span>.<span className="text-white">title</span> = <span className="text-[#00ff88]">'{activity.lesson.title}'</span>
+                  <p className="text-primary-900 font-semibold break-words text-sm md:text-base">
+                    {activity.lesson.title}
                   </p>
-                  <p className="text-gray-400 text-xs md:text-sm font-mono break-words">
-                    <span className="text-[#39ff14]">course</span>.<span className="text-white">title</span> = <span className="text-gray-500">'{activity.lesson.course.title}'</span>
+                  <p className="text-primary-700 text-xs md:text-sm break-words">
+                    {activity.lesson.course.title}
                   </p>
                 </div>
                 {activity.watchedAt && (
-                  <div className="text-gray-500 text-xs font-mono">
+                  <div className="text-primary-600 text-xs font-medium bg-primary-100 px-2 py-1 rounded">
                     {new Date(activity.watchedAt).toLocaleDateString('ru-RU')}
                   </div>
                 )}
@@ -192,39 +191,32 @@ export default function StudentDashboard() {
 
       {/* My Courses Section */}
       <div className="relative mb-8 animate-slide-in">
-        <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gradient neon-glow font-mono mb-2">
-          <span className="text-[#39ff14]">const</span>{' '}
-          <span className="text-white">myCourses</span>{' '}
-          <span className="text-[#39ff14]">=</span>{' '}
-          <span className="text-[#00ff88]">courses.filter(c =&gt; c.hasAccess)</span>;
+        <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gradient mb-2">
+          {t('courses.myCourses')}
         </h2>
-        <div className="absolute top-0 right-0 text-xs font-mono text-gray-600 animate-pulse">
-          // {myCourses.length} courses
+        <div className="absolute top-0 right-0 text-xs text-primary-700 font-semibold bg-primary-100 px-2 py-1 rounded">
+          {myCourses.length} {t('courses.coursesCount', { count: myCourses.length, defaultValue: myCourses.length === 1 ? 'курс' : 'курсов' })}
         </div>
       </div>
 
       {coursesLoading ? (
         <div className="text-center py-12">
           <div className="inline-block relative">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#39ff14]/30 border-t-[#39ff14]"></div>
-            <div className="absolute inset-0 animate-ping rounded-full border-2 border-[#39ff14]/20"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-300 border-t-primary-600"></div>
           </div>
-          <p className="mt-4 text-gray-400 font-mono">loading courses...</p>
+          <p className="mt-4 text-primary-700 font-medium">Загрузка курсов...</p>
         </div>
       ) : myCourses.length === 0 ? (
         <div className="text-center py-12 animate-fade-scale">
-          <BookOpen className="mx-auto h-16 w-16 text-gray-600 mb-4 animate-pulse-glow" />
-          <div className="font-mono text-gray-400 mb-4">
-            <span className="text-[#39ff14]">if</span>{' '}
-            <span className="text-white">(myCourses.length === 0)</span>{' '}
-            <span className="text-[#39ff14]">return</span>{' '}
-            <span className="text-gray-500">'Нет курсов'</span>;
-          </div>
+          <BookOpen className="mx-auto h-16 w-16 text-primary-300 mb-4" />
+          <p className="text-primary-700 mb-4 text-lg font-semibold">
+            {t('courses.noAccess', { defaultValue: 'У вас пока нет доступа к курсам' })}
+          </p>
           <Link
             to="/courses"
-            className="glow-button inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-black bg-gradient-primary hover:shadow-lg hover:shadow-[#39ff14]/70 transition-all font-mono font-bold relative z-10"
+            className="btn-primary inline-flex items-center"
           >
-            viewAllCourses()
+            {t('courses.allCourses')}
           </Link>
         </div>
       ) : (
@@ -243,19 +235,19 @@ export default function StudentDashboard() {
                     alt={course.title}
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
               )}
               <div className="p-4 md:p-6">
-                <h3 className="text-lg md:text-xl font-semibold text-white mb-2 font-mono group-hover:text-[#39ff14] transition-colors break-words">
+                <h3 className="text-lg md:text-xl font-semibold text-primary-900 mb-2 group-hover:text-primary-700 transition-colors break-words">
                   {course.title}
                 </h3>
                 {course.description && (
-                  <p className="text-gray-400 text-xs md:text-sm mb-4 line-clamp-2 break-words">{course.description}</p>
+                  <p className="text-primary-700 text-xs md:text-sm mb-4 line-clamp-2 break-words">{course.description}</p>
                 )}
-                <div className="flex items-center text-sm text-gray-500 font-mono">
-                  <BookOpen className="h-4 w-4 mr-2 text-[#39ff14] animate-pulse" />
-                  <span>{course._count?.lessons || 0} <span className="text-[#00ff88]">lessons</span></span>
+                <div className="flex items-center text-sm text-primary-600 font-medium">
+                  <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
+                  <span>{course._count?.lessons || 0} {t('lessons.lessonsCount', { count: course._count?.lessons || 0, defaultValue: course._count?.lessons === 1 ? 'урок' : 'уроков' })}</span>
                 </div>
               </div>
             </Link>

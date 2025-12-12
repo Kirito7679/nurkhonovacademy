@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { Course, ApiResponse } from '../types';
 import { BookOpen, Lock, CheckCircle, ArrowRight, Eye, Grid3x3, List, Search, Filter } from 'lucide-react';
@@ -12,6 +13,7 @@ type StatusFilter = 'all' | 'approved' | 'pending' | 'locked';
 type SortBy = 'createdAt' | 'title' | 'lessons';
 
 export default function Courses() {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
@@ -38,87 +40,87 @@ export default function Courses() {
   const getStatusBadge = (course: Course) => {
     if (course.hasAccess) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neon-glow/20 text-neon-glow border border-neon-glow/50 neon-glow font-mono animate-pulse-glow">
-          <CheckCircle className="h-3 w-3 mr-1" />
-          approved
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+          <CheckCircle className="h-3 w-3 mr-1 text-green-700" />
+          {t('students.approved')}
         </span>
       );
     }
     if (course.studentCourseStatus === 'PENDING') {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-mono">
-          pending
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200">
+          {t('students.pending')}
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#1f2937] text-gray-400 border border-[#374151] font-mono">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
         <Lock className="h-3 w-3 mr-1" />
-        locked
+        {t('courses.locked', { defaultValue: 'Заблокирован' })}
       </span>
     );
   };
 
   return (
-    <div className="code-bg particle-bg">
+    <div>
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <h1 className="text-3xl md:text-5xl font-bold text-gradient neon-glow font-mono">
-            <span className="text-[#39ff14]">const</span> courses <span className="text-[#39ff14]">=</span> <span className="text-white">[]</span>;
+          <h1 className="text-3xl md:text-5xl font-bold text-gradient">
+            {t('courses.title')}
           </h1>
           
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-2 bg-[#111827] border border-[#374151] rounded-lg p-1 self-start md:self-auto">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-md transition-all duration-200 ${
-              viewMode === 'grid'
-                ? 'bg-gradient-primary text-black shadow-lg shadow-[#39ff14]/50'
-                : 'text-gray-400 hover:text-[#39ff14] hover:bg-[#1f2937]'
-            }`}
-            title="Отображать в виде сетки"
-          >
-            <Grid3x3 className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-all duration-200 ${
-              viewMode === 'list'
-                ? 'bg-gradient-primary text-black shadow-lg shadow-[#39ff14]/50'
-                : 'text-gray-400 hover:text-[#39ff14] hover:bg-[#1f2937]'
-            }`}
-            title="Отображать в виде списка"
-          >
-            <List className="h-5 w-5" />
-          </button>
-        </div>
+          <div className="flex items-center gap-2 bg-white border border-neutral-300 rounded-lg p-1 self-start md:self-auto shadow-sm">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-md transition-all duration-200 ${
+                viewMode === 'grid'
+                  ? 'bg-gradient-primary text-white shadow-sm'
+                  : 'text-neutral-500 hover:text-primary-600 hover:bg-neutral-50'
+              }`}
+              title={t('courses.gridView', { defaultValue: 'Отображать в виде сетки' })}
+            >
+              <Grid3x3 className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-md transition-all duration-200 ${
+                viewMode === 'list'
+                  ? 'bg-gradient-primary text-white shadow-sm'
+                  : 'text-neutral-500 hover:text-primary-600 hover:bg-neutral-50'
+              }`}
+              title={t('courses.listView', { defaultValue: 'Отображать в виде списка' })}
+            >
+              <List className="h-5 w-5" />
+            </button>
+          </div>
 
         {/* Search and Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           {/* Search */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400 pointer-events-none z-10" />
             <input
               type="text"
-              placeholder="Поиск курсов..."
+              placeholder={t('courses.searchPlaceholder', { defaultValue: 'Поиск курсов...' })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-[#1f2937] border border-[#374151] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#39ff14] focus:border-transparent font-mono text-sm md:text-base"
+              className="input-field pl-11"
             />
           </div>
 
           {/* Status Filter */}
           <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-gray-400 hidden md:block" />
+            <Filter className="h-5 w-5 text-neutral-400 hidden md:block" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-[#1f2937] border border-[#374151] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#39ff14] focus:border-transparent font-mono text-sm md:text-base"
+              className="input-field flex-1 md:flex-none"
             >
-              <option value="all">Все курсы</option>
-              <option value="approved">Доступные</option>
-              <option value="pending">Ожидающие</option>
-              <option value="locked">Заблокированные</option>
+              <option value="all">{t('courses.allCourses')}</option>
+              <option value="approved">{t('students.approved')}</option>
+              <option value="pending">{t('students.pending')}</option>
+              <option value="locked">{t('courses.locked', { defaultValue: 'Заблокированные' })}</option>
             </select>
           </div>
 
@@ -127,15 +129,16 @@ export default function Courses() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-[#1f2937] border border-[#374151] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#39ff14] focus:border-transparent font-mono text-sm md:text-base"
+              className="input-field flex-1 md:flex-none"
             >
-              <option value="createdAt">По дате</option>
-              <option value="title">По названию</option>
-              <option value="lessons">По урокам</option>
+              <option value="createdAt">{t('courses.sortByDate', { defaultValue: 'По дате' })}</option>
+              <option value="title">{t('courses.sortByTitle', { defaultValue: 'По названию' })}</option>
+              <option value="lessons">{t('courses.sortByLessons', { defaultValue: 'По урокам' })}</option>
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="px-3 md:px-4 py-2 bg-[#1f2937] border border-[#374151] rounded-lg text-white hover:border-[#39ff14] transition-colors font-mono text-sm md:text-base"
+              className="px-3 md:px-4 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-50 hover:border-primary-300 transition-colors text-sm md:text-base"
+              title={sortOrder === 'asc' ? t('courses.sortAsc', { defaultValue: 'По возрастанию' }) : t('courses.sortDesc', { defaultValue: 'По убыванию' })}
             >
               {sortOrder === 'asc' ? '↑' : '↓'}
             </button>
@@ -177,16 +180,11 @@ export default function Courses() {
         </div>
       ) : courses.length === 0 ? (
         <div className="text-center py-12 animate-fade-scale">
-          <BookOpen className="mx-auto h-16 w-16 text-gray-600 mb-4 animate-pulse-glow" />
-          <div className="font-mono text-gray-400 mb-4">
-            <span className="text-[#39ff14]">if</span>{' '}
-            <span className="text-white">(courses.length === 0)</span>{' '}
-            <span className="text-[#39ff14]">return</span>{' '}
-            <span className="text-gray-500">'Нет доступных курсов'</span>;
-          </div>
+          <BookOpen className="mx-auto h-16 w-16 text-neutral-400 mb-4" />
+          <p className="text-neutral-600 mb-4">{t('courses.noCourses')}</p>
           {debouncedSearch && (
-            <p className="text-sm text-gray-500 font-mono mt-2">
-              <span className="text-[#39ff14]">//</span> Попробуйте изменить параметры поиска
+            <p className="text-sm text-neutral-500 mt-2">
+              {t('courses.tryDifferentSearch', { defaultValue: 'Попробуйте изменить параметры поиска' })}
             </p>
           )}
         </div>
@@ -215,7 +213,7 @@ export default function Courses() {
               )}
               <div className="p-4 md:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                  <h3 className="text-lg md:text-xl font-semibold text-white font-mono group-hover:text-[#39ff14] transition-colors break-words flex-1">
+                  <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors break-words flex-1">
                     {course.title}
                   </h3>
                   <div className="flex-shrink-0">{getStatusBadge(course)}</div>
@@ -224,18 +222,17 @@ export default function Courses() {
                   <p className="text-gray-400 text-xs md:text-sm mb-4 line-clamp-2 break-words">{course.description}</p>
                 )}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm text-gray-500 font-mono">
-                    <BookOpen className="h-4 w-4 mr-2 text-[#39ff14] animate-pulse" />
-                    <span>{course._count?.lessons || 0} <span className="text-[#00ff88]">lessons</span></span>
+                  <div className="flex items-center text-sm text-neutral-500">
+                    <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
+                    <span>{course._count?.lessons || 0} {t('lessons.lessonsCount', { count: course._count?.lessons || 0, defaultValue: 'уроков' })}</span>
                   </div>
                   <Link
                     to={`/courses/${course.id}`}
-                    className="group inline-flex items-center gap-2 px-4 py-2 text-[#39ff14] hover:text-white border border-[#39ff14]/50 rounded-lg hover:bg-[#39ff14]/10 hover:border-[#39ff14] hover:neon-border transition-all duration-300 font-mono text-sm relative overflow-hidden"
+                    className="btn-secondary group inline-flex items-center gap-2 text-sm"
                   >
-                    <span className="absolute inset-0 bg-gradient-to-r from-[#39ff14]/0 via-[#39ff14]/20 to-[#39ff14]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
-                    <Eye className="h-4 w-4 relative z-10 animate-pulse group-hover:animate-none" />
-                    <span className="relative z-10">view()</span>
-                    <ArrowRight className="h-4 w-4 relative z-10 group-hover:translate-x-1 transition-transform duration-300" />
+                    <Eye className="h-4 w-4" />
+                    <span>Просмотр</span>
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
                   </Link>
                 </div>
               </div>
@@ -268,7 +265,7 @@ export default function Courses() {
                 <div className="flex-1 flex flex-col justify-between">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg md:text-xl font-semibold text-white font-mono group-hover:text-[#39ff14] transition-colors mb-1 break-words">
+                      <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-1 break-words">
                         {course.title}
                       </h3>
                       {course.description && (
@@ -280,18 +277,17 @@ export default function Courses() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center text-sm text-gray-500 font-mono">
-                      <BookOpen className="h-4 w-4 mr-2 text-[#39ff14] animate-pulse" />
-                      <span>{course._count?.lessons || 0} <span className="text-[#00ff88]">lessons</span></span>
+                    <div className="flex items-center text-sm text-neutral-500">
+                      <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
+                      <span>{course._count?.lessons || 0} {t('lessons.lessonsCount', { count: course._count?.lessons || 0, defaultValue: 'уроков' })}</span>
                     </div>
                     <Link
                       to={`/courses/${course.id}`}
-                      className="group inline-flex items-center gap-2 px-4 py-2 text-[#39ff14] hover:text-white border border-[#39ff14]/50 rounded-lg hover:bg-[#39ff14]/10 hover:border-[#39ff14] hover:neon-border transition-all duration-300 font-mono text-sm relative overflow-hidden"
+                      className="btn-secondary group inline-flex items-center gap-2 text-sm"
                     >
-                      <span className="absolute inset-0 bg-gradient-to-r from-[#39ff14]/0 via-[#39ff14]/20 to-[#39ff14]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
-                      <Eye className="h-4 w-4 relative z-10 animate-pulse group-hover:animate-none" />
-                      <span className="relative z-10">view()</span>
-                      <ArrowRight className="h-4 w-4 relative z-10 group-hover:translate-x-1 transition-transform duration-300" />
+                      <Eye className="h-4 w-4" />
+                      <span>{t('courses.view', { defaultValue: 'Просмотр' })}</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
                     </Link>
                   </div>
                 </div>

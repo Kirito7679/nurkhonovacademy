@@ -18,5 +18,18 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Генерировать хэши для файлов (для правильного кэширования)
+    rollupOptions: {
+      output: {
+        // Добавляем хэш к именам файлов для кэш-бастинга
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
+    },
+    // Очищать папку dist перед сборкой
+    emptyOutDir: true,
+  },
 })
 

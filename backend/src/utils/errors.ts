@@ -25,10 +25,16 @@ export const errorHandler = (
     });
   }
 
-  console.error('Error:', err);
+  console.error('Unhandled Error:', err);
+  console.error('Error stack:', err.stack);
+  console.error('Request URL:', req.url);
+  console.error('Request method:', req.method);
+  
   return res.status(500).json({
     success: false,
-    message: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' 
+      ? `Internal server error: ${err.message}` 
+      : 'Internal server error',
   });
 };
 

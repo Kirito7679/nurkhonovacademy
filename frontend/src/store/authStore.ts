@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { User } from '../types';
+import i18n from '../i18n/config';
 
 interface AuthState {
   user: User | null;
@@ -16,6 +17,11 @@ export const useAuthStore = create<AuthState>((set) => {
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
 
+  // Set language from user preference
+  if (user?.language && ['ru', 'en', 'uz'].includes(user.language)) {
+    i18n.changeLanguage(user.language);
+  }
+
   return {
     user,
     token,
@@ -23,6 +29,12 @@ export const useAuthStore = create<AuthState>((set) => {
     setAuth: (user: User, token: string) => {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Update language if user has preference
+      if (user.language && ['ru', 'en', 'uz'].includes(user.language)) {
+        i18n.changeLanguage(user.language);
+      }
+      
       set({ user, token, isAuthenticated: true });
     },
     logout: () => {
@@ -32,6 +44,12 @@ export const useAuthStore = create<AuthState>((set) => {
     },
     updateUser: (user: User) => {
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Update language if changed
+      if (user.language && ['ru', 'en', 'uz'].includes(user.language)) {
+        i18n.changeLanguage(user.language);
+      }
+      
       set({ user });
     },
   };

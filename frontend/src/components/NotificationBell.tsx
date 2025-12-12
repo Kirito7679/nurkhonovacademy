@@ -5,12 +5,14 @@ import { Bell, X, CheckCircle, ChevronLeft, ChevronRight, Trash2 } from 'lucide-
 import api from '../services/api';
 import { ApiResponse, NotificationsResponse, Notification } from '../types';
 import { useSocket } from '../hooks/useSocket';
+import ConfirmModal from './ConfirmModal';
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
   const { data: notificationsResponse, refetch } = useQuery<ApiResponse<NotificationsResponse>>(
     ['notifications', page],
@@ -80,9 +82,7 @@ export default function NotificationBell() {
   };
 
   const handleDeleteAll = () => {
-    if (confirm('Вы уверены, что хотите удалить все уведомления? Это действие нельзя отменить.')) {
-      deleteAllNotificationsMutation.mutate();
-    }
+    setConfirmModal({ isOpen: true });
   };
 
   const getNotificationIcon = (type: Notification['type']) => {
@@ -103,15 +103,15 @@ export default function NotificationBell() {
   const getNotificationColor = (type: Notification['type']) => {
     switch (type) {
       case 'COMMENT':
-        return 'text-[#39ff14]';
+        return 'text-primary-500';
       case 'COURSE_REQUEST':
-        return 'text-yellow-400';
+        return 'text-yellow-500';
       case 'COURSE_APPROVED':
-        return 'text-[#00ff88]';
+        return 'text-green-500';
       case 'COURSE_REJECTED':
-        return 'text-red-400';
+        return 'text-red-500';
       default:
-        return 'text-gray-400';
+        return 'text-neutral-400';
     }
   };
 
@@ -119,11 +119,11 @@ export default function NotificationBell() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-300 hover:text-[#39ff14] transition-colors rounded-lg hover:bg-[#1f2937] border border-[#374151] hover:border-[#39ff14]/50"
+        className="relative p-2 text-primary-700 hover:text-primary-800 transition-colors rounded-lg hover:bg-primary-50 border-2 border-primary-200 hover:border-primary-400 shadow-sm"
       >
         <Bell size={20} />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 text-xs font-bold text-black bg-[#39ff14] rounded-full animate-pulse-glow">
+          <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-gradient-accent rounded-full shadow-glow">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -135,17 +135,17 @@ export default function NotificationBell() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-[calc(100vw-1rem)] sm:w-80 md:w-96 bg-[#111827] border border-[#374151] rounded-lg shadow-lg z-50 max-h-[calc(100vh-8rem)] overflow-hidden flex flex-col animate-slide-in">
-            <div className="flex items-center justify-between p-4 border-b border-[#374151]">
-              <h3 className="text-lg font-semibold text-white font-mono">
-                <span className="text-[#39ff14]">const</span> notifications <span className="text-[#39ff14]">=</span> <span className="text-white">[]</span>;
+          <div className="absolute right-0 mt-2 w-[calc(100vw-1rem)] sm:w-80 md:w-96 bg-white/95 backdrop-blur-sm border-2 border-primary-200/50 rounded-xl shadow-education z-50 max-h-[calc(100vh-8rem)] overflow-hidden flex flex-col animate-slide-in">
+            <div className="flex items-center justify-between p-4 border-b-2 border-primary-200/50 bg-gradient-to-r from-primary-50 to-transparent">
+              <h3 className="text-lg font-bold text-primary-900">
+                Уведомления
               </h3>
               <div className="flex items-center gap-2">
                 {notifications.length > 0 && (
                   <button
                     onClick={handleDeleteAll}
                     disabled={deleteAllNotificationsMutation.isLoading}
-                    className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg border border-red-500/50 hover:border-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1.5 text-red-600 hover:text-white hover:bg-red-500 rounded-lg border-2 border-red-300 hover:border-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     title="Удалить все уведомления"
                   >
                     <Trash2 size={16} />
@@ -154,14 +154,14 @@ export default function NotificationBell() {
                 {unreadCount > 0 && (
                   <button
                     onClick={handleMarkAllAsRead}
-                    className="text-xs text-[#39ff14] hover:text-[#00ff88] transition-colors font-mono"
+                    className="text-xs text-primary-700 hover:text-primary-800 transition-colors font-semibold px-2 py-1 rounded border border-primary-300 hover:bg-primary-100"
                   >
-                    markAllRead()
+                    Отметить все
                   </button>
                 )}
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="text-primary-500 hover:text-primary-700 transition-colors"
                 >
                   <X size={18} />
                 </button>
@@ -171,22 +171,19 @@ export default function NotificationBell() {
             <div className="overflow-y-auto flex-1">
               {notifications.length === 0 ? (
                 <div className="p-8 text-center">
-                  <Bell className="mx-auto h-12 w-12 text-gray-600 mb-4" />
-                  <p className="text-gray-400 font-mono">
-                    <span className="text-[#39ff14]">if</span>{' '}
-                    <span className="text-white">(notifications.length === 0)</span>{' '}
-                    <span className="text-[#39ff14]">return</span>{' '}
-                    <span className="text-gray-500">'Нет уведомлений'</span>;
+                  <Bell className="mx-auto h-12 w-12 text-primary-300 mb-4" />
+                  <p className="text-primary-700 font-medium">
+                    Нет уведомлений
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-[#374151]">
+                <div className="divide-y divide-primary-100">
                   {notifications.map((notification) => (
                     <div
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`p-4 cursor-pointer transition-all hover:bg-[#1f2937] ${
-                        !notification.read ? 'bg-[#1f2937]/50' : ''
+                      className={`p-4 cursor-pointer transition-all hover:bg-primary-50/70 ${
+                        !notification.read ? 'bg-primary-50 border-l-4 border-primary-500' : 'border-l-4 border-transparent'
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -195,20 +192,19 @@ export default function NotificationBell() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className={`text-sm font-semibold font-mono ${
-                              !notification.read ? 'text-white' : 'text-gray-400'
+                            <h4 className={`text-sm font-semibold ${
+                              !notification.read ? 'text-primary-900' : 'text-primary-700'
                             }`}>
                               {notification.title}
                             </h4>
                             {!notification.read && (
-                              <div className="w-2 h-2 bg-[#39ff14] rounded-full flex-shrink-0 mt-1 animate-pulse-glow"></div>
+                              <div className="w-2.5 h-2.5 bg-gradient-accent rounded-full flex-shrink-0 mt-1 shadow-sm"></div>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400 font-mono mb-2 line-clamp-2">
+                          <p className="text-xs text-primary-600 mb-2 line-clamp-2">
                             {notification.message}
                           </p>
-                          <p className="text-xs text-gray-600 font-mono">
-                            <span className="text-[#39ff14]">time:</span>{' '}
+                          <p className="text-xs text-primary-500">
                             {new Date(notification.createdAt).toLocaleString('ru-RU', {
                               day: '2-digit',
                               month: '2-digit',
@@ -226,22 +222,22 @@ export default function NotificationBell() {
 
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between p-4 border-t border-[#374151]">
-                  <div className="text-xs text-gray-400 font-mono">
-                    <span className="text-[#39ff14]">page</span> {pagination.page} <span className="text-[#39ff14]">of</span> {pagination.totalPages}
+                <div className="flex items-center justify-between p-4 border-t-2 border-primary-200/50 bg-primary-50/30">
+                  <div className="text-xs text-primary-700 font-medium">
+                    Страница {pagination.page} из {pagination.totalPages}
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setPage(page - 1)}
                       disabled={page === 1}
-                      className="p-1 border border-[#374151] rounded text-gray-400 hover:text-white hover:border-[#39ff14] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1.5 border-2 border-primary-300 rounded-lg text-primary-700 hover:text-white hover:bg-gradient-primary hover:border-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
                       <ChevronLeft size={14} />
                     </button>
                     <button
                       onClick={() => setPage(page + 1)}
                       disabled={!pagination.hasMore}
-                      className="p-1 border border-[#374151] rounded text-gray-400 hover:text-white hover:border-[#39ff14] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1.5 border-2 border-primary-300 rounded-lg text-primary-700 hover:text-white hover:bg-gradient-primary hover:border-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
                       <ChevronRight size={14} />
                     </button>
@@ -252,6 +248,19 @@ export default function NotificationBell() {
           </div>
         </>
       )}
+
+      {/* Confirm Delete All Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false })}
+        onConfirm={() => {
+          deleteAllNotificationsMutation.mutate();
+          setConfirmModal({ isOpen: false });
+        }}
+        title="Удалить все уведомления"
+        message="Вы уверены, что хотите удалить все уведомления? Это действие нельзя отменить."
+        variant="danger"
+      />
     </div>
   );
 }

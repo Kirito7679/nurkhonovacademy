@@ -5,6 +5,7 @@ import { commentSchema } from '../utils/validation';
 import { AuthRequest } from '../middleware/auth';
 import { createNotification } from './notificationController';
 import { sanitizeText } from '../utils/sanitize';
+import { emitCommentUpdate } from '../services/socketService';
 
 // Get all comments for a lesson
 export const getLessonComments = async (
@@ -255,6 +256,9 @@ export const createComment = async (
         );
       }
     }
+
+    // Emit socket event to update comments in real-time
+    emitCommentUpdate(lessonId, comment);
 
     res.status(201).json({
       success: true,

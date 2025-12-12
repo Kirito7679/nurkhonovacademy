@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { AppError } from '../utils/errors';
 import { AuthRequest } from '../middleware/auth';
-import { lessonSchema, validateYouTubeUrl } from '../utils/validation';
+import { lessonSchema, validateVideoUrl } from '../utils/validation';
 
 export const getLessonById = async (
   req: AuthRequest,
@@ -108,9 +108,9 @@ export const createLesson = async (
       throw new AppError('Недостаточно прав для создания урока в этом курсе', 403);
     }
 
-    // Validate YouTube URL if provided
-    if (validatedData.videoUrl && !validateYouTubeUrl(validatedData.videoUrl)) {
-      throw new AppError('Неверный формат YouTube URL', 400);
+    // Validate video URL if provided (supports YouTube, Vimeo, Google Drive, VK, and direct links)
+    if (validatedData.videoUrl && !validateVideoUrl(validatedData.videoUrl)) {
+      throw new AppError('Неверный формат URL видео. Поддерживаются: YouTube, Vimeo, Google Drive, VK и прямые ссылки на видео', 400);
     }
 
     const lesson = await prisma.lesson.create({
@@ -160,9 +160,9 @@ export const updateLesson = async (
       throw new AppError('Недостаточно прав для редактирования этого урока', 403);
     }
 
-    // Validate YouTube URL if provided
-    if (validatedData.videoUrl && !validateYouTubeUrl(validatedData.videoUrl)) {
-      throw new AppError('Неверный формат YouTube URL', 400);
+    // Validate video URL if provided (supports YouTube, Vimeo, Google Drive, VK, and direct links)
+    if (validatedData.videoUrl && !validateVideoUrl(validatedData.videoUrl)) {
+      throw new AppError('Неверный формат URL видео. Поддерживаются: YouTube, Vimeo, Google Drive, VK и прямые ссылки на видео', 400);
     }
 
     const lesson = await prisma.lesson.update({

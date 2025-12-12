@@ -2,7 +2,11 @@ export enum Role {
   STUDENT = 'STUDENT',
   TEACHER = 'TEACHER',
   ADMIN = 'ADMIN',
+  MODERATOR = 'MODERATOR',
+  ASSISTANT = 'ASSISTANT',
 }
+
+export type SupportedLanguage = 'ru' | 'en' | 'uz';
 
 export enum StudentCourseStatus {
   PENDING = 'PENDING',
@@ -19,8 +23,20 @@ export interface User {
   avatarUrl?: string | null;
   telegram?: string | null;
   role: Role;
+  language?: SupportedLanguage;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface Module {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string | null;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  lessons?: Lesson[];
 }
 
 export interface Course {
@@ -31,6 +47,7 @@ export interface Course {
   price: number;
   trialLessonId?: string | null;
   teacherId: string;
+  isVisible?: boolean;
   createdAt: string;
   updatedAt: string;
   teacher?: {
@@ -39,6 +56,7 @@ export interface Course {
     lastName: string;
     telegram?: string | null;
   };
+  modules?: Module[];
   _count?: {
     lessons: number;
     studentCourses: number;
@@ -50,6 +68,7 @@ export interface Course {
 export interface Lesson {
   id: string;
   courseId: string;
+  moduleId?: string | null;
   title: string;
   description?: string | null;
   order: number;
@@ -61,11 +80,15 @@ export interface Lesson {
     title: string;
     teacherId: string;
   };
+  module?: Module | null;
   files?: LessonFile[];
   _count?: {
     files: number;
   };
   progress?: StudentProgress | null;
+  practiceExercises?: PracticeExercise[];
+  flashcardDecks?: FlashcardDeck[];
+  integrations?: ExternalIntegration[];
 }
 
 export interface LessonFile {
@@ -153,5 +176,254 @@ export interface NotificationsResponse {
 export interface CommentsResponse {
   comments: Comment[];
   pagination: PaginationInfo;
+}
+
+export interface QuizOption {
+  id: string;
+  questionId: string;
+  text: string;
+  isCorrect?: boolean;
+  order: number;
+}
+
+export interface QuizQuestion {
+  id: string;
+  quizId: string;
+  question: string;
+  type: QuizQuestionType;
+  order: number;
+  metadata?: string | null; // JSON string for complex question data
+  options?: QuizOption[];
+  correctAnswer?: string | null;
+}
+
+export interface Quiz {
+  id: string;
+  lessonId: string;
+  title?: string | null;
+  description?: string | null;
+  passingScore: number;
+  createdAt: string;
+  updatedAt: string;
+  questions: QuizQuestion[];
+  results?: QuizResult[];
+}
+
+export interface QuizResult {
+  id: string;
+  quizId: string;
+  studentId: string;
+  score: number;
+  passed: boolean;
+  answers: string; // JSON string
+  completedAt: string;
+  correctAnswers?: number;
+  totalQuestions?: number;
+  passingScore?: number;
+  student?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  read: boolean;
+  readAt?: string | null;
+  createdAt: string;
+  sender?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string | null;
+  };
+  receiver?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string | null;
+  };
+}
+
+export interface ChatUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  avatarUrl?: string | null;
+  lastMessage?: {
+    content: string;
+    createdAt: string;
+    senderId: string;
+  } | null;
+  unreadCount?: number;
+}
+
+export interface FlashcardDeck {
+  id: string;
+  courseId?: string | null;
+  lessonId?: string | null;
+  title: string;
+  description?: string | null;
+  createdBy: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  creator?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  flashcards?: Flashcard[];
+  _count?: {
+    flashcards: number;
+  };
+}
+
+export interface Flashcard {
+  id: string;
+  deckId: string;
+  front: string;
+  back: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  progress?: FlashcardProgress | null;
+}
+
+export interface FlashcardProgress {
+  id: string;
+  userId: string;
+  deckId: string;
+  cardId: string;
+  difficulty: 'NEW' | 'EASY' | 'MEDIUM' | 'HARD';
+  lastReviewed?: string | null;
+  nextReview?: string | null;
+  reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PracticeExercise {
+  id: string;
+  lessonId: string;
+  title: string;
+  description?: string | null;
+  type: string;
+  instructions: string;
+  solution?: string | null;
+  autoCheck: boolean;
+  maxAttempts: number;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: string | null; // JSON string for exercise data (drag-drop items, matching pairs, etc.)
+}
+
+// Types for interactive exercises
+export interface DragDropItem {
+  id: string;
+  content: string;
+}
+
+export interface DragDropZone {
+  id: string;
+  label: string;
+  correctItemId: string;
+}
+
+export interface DragDropExercise {
+  type: 'DRAG_DROP';
+  items: DragDropItem[];
+  dropZones: DragDropZone[];
+}
+
+export interface MatchingItem {
+  id: string;
+  left: string;
+  right: string;
+}
+
+export interface MatchingExercise {
+  type: 'MATCHING';
+  items: MatchingItem[];
+}
+
+export interface PracticeResult {
+  id: string;
+  exerciseId: string;
+  studentId: string;
+  answer: string;
+  score?: number | null;
+  feedback?: string | null;
+  status: 'SUBMITTED' | 'REVIEWED' | 'APPROVED' | 'REJECTED';
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  attemptNumber: number;
+  submittedAt: string;
+  exercise?: PracticeExercise;
+  student?: User;
+}
+
+export interface ExternalIntegration {
+  id: string;
+  userId?: string | null;
+  courseId?: string | null;
+  lessonId?: string | null;
+  type: 'GOOGLE_DOCS' | 'QUIZLET' | 'YOUTUBE' | 'OTHER';
+  externalId: string;
+  externalUrl: string;
+  metadata?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  action: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  details?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: Role;
+  };
+}
+
+export type QuizQuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'DRAG_DROP' | 'MATCHING' | 'FILL_BLANK';
+
+// API Error types
+export interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+    };
+    status?: number;
+  };
+  message?: string;
+}
+
+export interface StudentCourseWithDetails extends StudentCourse {
+  course?: Course;
+  student?: User;
+}
+
+export interface StudentWithCourses extends User {
+  studentCourses?: StudentCourseWithDetails[];
+  progress?: StudentProgress[];
 }
 

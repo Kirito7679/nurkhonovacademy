@@ -23,3 +23,8 @@ export const sanitizeText = (text: string): string => {
     .replace(/on\w+=/gi, ''); // Remove event handlers like onclick=
 };
 
+
+
+
+
+

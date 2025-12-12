@@ -51,6 +51,7 @@ export const register = async (
         email: true,
         avatarUrl: true,
         role: true,
+        language: true,
         createdAt: true,
       },
     });
@@ -87,19 +88,14 @@ export const login = async (
     });
 
     if (!user) {
-      console.log(`[LOGIN] User not found: ${validatedData.phone}`);
       throw new AppError('Неверный номер телефона или пароль', 401);
     }
-
-    console.log(`[LOGIN] User found: ${user.firstName} ${user.lastName}, phone: ${user.phone}`);
 
     // Check password
     const isPasswordValid = await bcrypt.compare(
       validatedData.password,
       user.password
     );
-
-    console.log(`[LOGIN] Password check result: ${isPasswordValid}, provided: ${validatedData.password.substring(0, 3)}...`);
 
     if (!isPasswordValid) {
       throw new AppError('Неверный номер телефона или пароль', 401);
@@ -122,6 +118,7 @@ export const login = async (
           email: user.email,
           avatarUrl: user.avatarUrl,
           role: user.role,
+          language: user.language,
         },
         token,
       },
@@ -147,6 +144,7 @@ export const getMe = async (
         email: true,
         avatarUrl: true,
         role: true,
+        language: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -308,6 +306,7 @@ export const updateProfile = async (
     if (validatedData.email !== undefined) {
       updateData.email = validatedData.email || null;
     }
+    if (validatedData.language) updateData.language = validatedData.language;
 
     const user = await prisma.user.update({
       where: { id: req.user!.id },

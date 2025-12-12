@@ -1,4 +1,8 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Get API URL from environment or use default
+// VITE_API_URL should already include /api (e.g., http://localhost:5001/api)
+// If not provided, use default with /api
+const envApiUrl = import.meta.env.VITE_API_URL;
+export const API_BASE_URL = envApiUrl || 'http://localhost:5001/api';
 
 export const ROUTES = {
   LOGIN: '/login',

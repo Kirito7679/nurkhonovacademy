@@ -3,45 +3,66 @@ import { X, CheckCircle } from 'lucide-react';
 interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   message: string;
+  buttonText?: string;
 }
 
-export default function SuccessModal({ isOpen, onClose, title, message }: SuccessModalProps) {
+export default function SuccessModal({
+  isOpen,
+  onClose,
+  title = 'Успешно',
+  message,
+  buttonText = 'OK',
+}: SuccessModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-fade-in-scale">
-      <div className="card p-4 md:p-8 w-full max-w-md mx-4 relative animate-slide-in">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in-scale p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-slide-in overflow-hidden">
+        {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 z-10 text-neutral-400 hover:text-neutral-600 transition-colors bg-white/80 backdrop-blur-sm rounded-full p-1.5 hover:bg-white"
         >
-          <X className="h-6 w-6" />
+          <X className="h-5 w-5" />
         </button>
-        
-        <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center mb-6 animate-pulse-glow">
-            <CheckCircle className="h-12 w-12 text-black" />
+
+        {/* Header with success gradient */}
+        <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6 md:p-8 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/20 backdrop-blur-sm border-2 border-white/30">
+              <CheckCircle className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-2xl md:text-3xl font-bold text-white pr-8">
+              {title}
+            </h3>
           </div>
-          
-          <h3 className="text-2xl font-bold text-gradient mb-4 font-mono">
-            <span className="text-[#39ff14]">✓</span> {title}
-          </h3>
-          
-          <p className="text-gray-300 mb-6 font-mono">
-            {message}
-          </p>
-          
-          <button
-            onClick={onClose}
-            className="glow-button px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-black bg-gradient-primary hover:shadow-lg hover:shadow-neon-glow/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neon-glow transition-all duration-200 font-mono font-bold relative z-10"
-          >
-            <span className="relative z-10">OK</span>
-          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 md:p-8">
+          <div className="space-y-6">
+            <p className="text-neutral-700 text-base leading-relaxed">
+              {message}
+            </p>
+
+            <button
+              onClick={onClose}
+              className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:scale-[1.02] transition-all"
+            >
+              {buttonText}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

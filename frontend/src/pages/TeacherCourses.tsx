@@ -24,21 +24,21 @@ export default function TeacherCourses() {
   const myCourses = courses.filter((course) => course.teacherId === user?.id || user?.role === 'ADMIN');
 
   return (
-    <div className="code-bg particle-bg">
+    <div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gradient neon-glow font-mono">
-          <span className="text-[#39ff14]">const</span> myCourses <span className="text-[#39ff14]">=</span> <span className="text-white">[]</span>;
+        <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gradient">
+          Мои курсы
         </h1>
         
         <div className="flex items-center gap-4">
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-2 bg-[#111827] border border-[#374151] rounded-lg p-1">
+          <div className="flex items-center gap-2 bg-white border border-neutral-300 rounded-lg p-1 shadow-soft">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-2 rounded-md transition-all duration-200 ${
                 viewMode === 'grid'
-                  ? 'bg-gradient-primary text-black shadow-lg shadow-[#39ff14]/50'
-                  : 'text-gray-400 hover:text-[#39ff14] hover:bg-[#1f2937]'
+                  ? 'bg-gradient-primary text-white shadow-soft'
+                  : 'text-neutral-500 hover:text-primary-600 hover:bg-neutral-50'
               }`}
               title="Отображать в виде сетки"
             >
@@ -48,8 +48,8 @@ export default function TeacherCourses() {
               onClick={() => setViewMode('list')}
               className={`p-2 rounded-md transition-all duration-200 ${
                 viewMode === 'list'
-                  ? 'bg-gradient-primary text-black shadow-lg shadow-[#39ff14]/50'
-                  : 'text-gray-400 hover:text-[#39ff14] hover:bg-[#1f2937]'
+                  ? 'bg-gradient-primary text-white shadow-soft'
+                  : 'text-neutral-500 hover:text-primary-600 hover:bg-neutral-50'
               }`}
               title="Отображать в виде списка"
             >
@@ -59,10 +59,10 @@ export default function TeacherCourses() {
           
           <Link
             to="/teacher/courses/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-black bg-gradient-primary hover:shadow-lg hover:shadow-[#39ff14]/50 transition-all font-mono font-bold"
+            className="btn-primary inline-flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
-            createCourse()
+            Создать курс
           </Link>
         </div>
       </div>
@@ -70,29 +70,25 @@ export default function TeacherCourses() {
       {isLoading ? (
         <div className="text-center py-12">
           <div className="inline-block relative">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#39ff14]/30 border-t-[#39ff14]"></div>
-            <div className="absolute inset-0 animate-ping rounded-full border-2 border-[#39ff14]/20"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-200 border-t-primary-500"></div>
           </div>
-          <p className="mt-4 text-gray-400 font-mono">loading courses...</p>
+          <p className="mt-4 text-neutral-600">Загрузка курсов...</p>
         </div>
       ) : myCourses.length === 0 ? (
         <div className="text-center py-12 animate-fade-scale">
-          <BookOpen className="mx-auto h-16 w-16 text-gray-600 mb-4 animate-pulse-glow" />
-          <div className="font-mono text-gray-400 mb-4">
-            <span className="text-[#39ff14]">if</span>{' '}
-            <span className="text-white">(myCourses.length === 0)</span>{' '}
-            <span className="text-[#39ff14]">return</span>{' '}
-            <span className="text-gray-500">'Нет курсов'</span>;
+          <BookOpen className="mx-auto h-16 w-16 text-neutral-400 mb-4" />
+          <div className="text-neutral-600 mb-4 text-lg">
+            Нет курсов
           </div>
-          <p className="mt-2 text-sm text-gray-500 font-mono mb-6">
-            <span className="text-[#39ff14]">//</span> Создайте свой первый курс
+          <p className="mt-2 text-sm text-neutral-500 mb-6">
+            Создайте свой первый курс
           </p>
           <Link
             to="/teacher/courses/new"
-            className="glow-button inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-black bg-gradient-primary hover:shadow-lg hover:shadow-[#39ff14]/70 transition-all font-mono font-bold relative z-10"
+            className="btn-primary inline-flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
-            createCourse()
+            Создать курс
           </Link>
         </div>
       ) : viewMode === 'grid' ? (
@@ -111,24 +107,24 @@ export default function TeacherCourses() {
                     alt={course.title}
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
               )}
               <div className="p-4 md:p-6">
-                <h3 className="text-lg md:text-xl font-semibold text-white font-mono group-hover:text-[#39ff14] transition-colors mb-2 break-words">
+                <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-2 break-words">
                   {course.title}
                 </h3>
                 {course.description && (
-                  <p className="text-gray-400 text-xs md:text-sm mb-4 line-clamp-2 break-words">{course.description}</p>
+                  <p className="text-neutral-600 text-xs md:text-sm mb-4 line-clamp-2 break-words">{course.description}</p>
                 )}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm text-gray-500 font-mono">
-                    <BookOpen className="h-4 w-4 mr-2 text-[#39ff14] animate-pulse" />
-                    <span>{course._count?.lessons || 0} <span className="text-[#00ff88]">lessons</span></span>
+                  <div className="flex items-center text-sm text-neutral-500">
+                    <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
+                    <span>{course._count?.lessons || 0} {course._count?.lessons === 1 ? 'урок' : 'уроков'}</span>
                   </div>
                   <Link
                     to={`/teacher/courses/${course.id}/edit`}
-                    className="text-[#39ff14] hover:text-white transition-colors group/edit"
+                    className="text-primary-600 hover:text-primary-700 transition-colors group/edit"
                   >
                     <Edit className="h-5 w-5 group-hover/edit:scale-110 transition-transform" />
                   </Link>
@@ -158,25 +154,24 @@ export default function TeacherCourses() {
                 )}
                 <div className="flex-1 flex flex-col justify-between">
                   <div className="mb-2">
-                    <h3 className="text-lg md:text-xl font-semibold text-white font-mono group-hover:text-[#39ff14] transition-colors mb-1 break-words">
+                    <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-1 break-words">
                       {course.title}
                     </h3>
                     {course.description && (
-                      <p className="text-gray-400 text-xs md:text-sm mb-3 line-clamp-2 break-words">{course.description}</p>
+                      <p className="text-neutral-600 text-xs md:text-sm mb-3 line-clamp-2 break-words">{course.description}</p>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center text-sm text-gray-500 font-mono">
-                      <BookOpen className="h-4 w-4 mr-2 text-[#39ff14] animate-pulse" />
-                      <span>{course._count?.lessons || 0} <span className="text-[#00ff88]">lessons</span></span>
+                    <div className="flex items-center text-sm text-neutral-500">
+                      <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
+                      <span>{course._count?.lessons || 0} {course._count?.lessons === 1 ? 'урок' : 'уроков'}</span>
                     </div>
                     <Link
                       to={`/teacher/courses/${course.id}/edit`}
-                      className="group/edit inline-flex items-center gap-2 px-4 py-2 text-[#39ff14] hover:text-white border border-[#39ff14]/50 rounded-lg hover:bg-[#39ff14]/10 hover:border-[#39ff14] hover:neon-border transition-all duration-300 font-mono text-sm relative overflow-hidden"
+                      className="group/edit inline-flex items-center gap-2 px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
                     >
-                      <span className="absolute inset-0 bg-gradient-to-r from-[#39ff14]/0 via-[#39ff14]/20 to-[#39ff14]/0 translate-x-[-100%] group-hover/edit:translate-x-[100%] transition-transform duration-700"></span>
-                      <Edit className="h-4 w-4 relative z-10" />
-                      <span className="relative z-10">edit()</span>
+                      <Edit className="h-4 w-4" />
+                      <span>Редактировать</span>
                     </Link>
                   </div>
                 </div>

@@ -3,7 +3,6 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import StudentSidebar from './StudentSidebar';
 import MobileBottomNav from './MobileBottomNav';
-import SupportButton from './SupportButton';
 import { useAuthStore } from '../store/authStore';
 
 export default function Layout() {
@@ -12,7 +11,7 @@ export default function Layout() {
   const isStudent = user?.role === 'STUDENT';
 
   return (
-    <div className="min-h-screen bg-[#030712]">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-blue-50/30 to-emerald-50/20">
       <Header />
       <div className="flex">
         {isTeacher && <Sidebar />}
@@ -28,7 +27,6 @@ export default function Layout() {
         </main>
       </div>
       <MobileBottomNav />
-      <SupportButton />
     </div>
   );
 }

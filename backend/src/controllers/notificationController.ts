@@ -57,8 +57,16 @@ export const getMyNotifications = async (
         },
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getMyNotifications:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      userId: req.user?.id,
+    });
+    if (error instanceof Error) {
+      return next(new AppError(`Ошибка при получении уведомлений: ${error.message}`, 500));
+    }
     next(error);
   }
 };
@@ -153,6 +161,42 @@ export const deleteAllNotifications = async (
     });
   } catch (error) {
     console.error('Error in deleteAllNotifications:', error);
+    next(error);
+  }
+};
+
+export const deleteNotification = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { notificationId } = req.params;
+    const userId = req.user!.id;
+
+    const notification = await prisma.notification.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification) {
+      throw new AppError('Уведомление не найдено', 404);
+    }
+
+    // Users can only delete their own notifications
+    if (notification.userId !== userId) {
+      throw new AppError('У вас нет прав для удаления этого уведомления', 403);
+    }
+
+    await prisma.notification.delete({
+      where: { id: notificationId },
+    });
+
+    res.json({
+      success: true,
+      message: 'Уведомление успешно удалено',
+    });
+  } catch (error) {
+    console.error('Error in deleteNotification:', error);
     next(error);
   }
 };

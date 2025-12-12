@@ -1,10 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { LogOut, User } from 'lucide-react';
 import { Role } from '../types';
 import NotificationBell from './NotificationBell';
+import Logo from './Logo';
+import LanguageToggle from './LanguageToggle';
 
 export default function Header() {
+  const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -16,32 +20,42 @@ export default function Header() {
   const isTeacher = user?.role === Role.TEACHER || user?.role === Role.ADMIN;
 
   return (
-    <header className="bg-[#111827]/90 backdrop-blur-md border-b border-[#1f2937] sticky top-0 z-50 particle-bg">
+    <header className="bg-white/95 backdrop-blur-md border-b-2 border-primary-200/50 sticky top-0 z-50 shadow-education">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link 
             to={isTeacher ? '/teacher/dashboard' : '/dashboard'} 
-            className="text-lg md:text-xl font-bold text-gradient neon-glow animate-slide-in font-mono"
+            className="text-lg md:text-xl font-bold text-gradient animate-slide-in flex items-center gap-2 hover:opacity-90 transition-opacity"
           >
-            <span className="hidden sm:inline">&lt;Nurkhonov Academy /&gt;</span>
-            <span className="sm:hidden">&lt;NA /&gt;</span>
+            <div className="relative flex items-center justify-center">
+              <Logo className="w-10 h-10" variant="icon" />
+            </div>
+            <div className="hidden sm:flex items-center gap-1">
+              <span className="font-extrabold bg-gradient-to-r from-primary-600 via-education-600 to-accent-600 bg-clip-text text-transparent">
+                Nurkhonov_
+              </span>
+              <span className="text-primary-700 font-semibold">Academy</span>
+            </div>
+            <span className="sm:hidden font-extrabold bg-gradient-to-r from-primary-600 via-education-600 to-accent-600 bg-clip-text text-transparent">
+              N_
+            </span>
           </Link>
           
           <div className="flex items-center gap-2 md:gap-4">
+            <LanguageToggle />
             <NotificationBell />
-            <div className="hidden md:flex items-center gap-2 text-gray-300 animate-fade-scale">
+            <div className="hidden md:flex items-center gap-2 text-primary-800 animate-fade-scale bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-200">
               <div className="relative">
-                <User size={20} className="text-[#39ff14] animate-pulse-glow" />
-                <span className="absolute top-0 right-0 w-2 h-2 bg-[#39ff14] rounded-full animate-ping"></span>
+                <User size={20} className="text-primary-600" />
               </div>
-              <span className="font-mono">{user?.firstName} {user?.lastName}</span>
+              <span className="font-semibold">{user?.firstName} {user?.lastName}</span>
             </div>
             <button
               onClick={handleLogout}
-              className="glow-button flex items-center gap-2 px-3 md:px-4 py-2 text-gray-300 hover:text-[#39ff14] hover:bg-[#1f2937] rounded-lg transition-all duration-200 border border-[#374151] hover:border-[#39ff14] hover:neon-border relative z-10 font-mono text-sm md:text-base"
+              className="flex items-center gap-2 px-3 md:px-4 py-2 text-primary-700 hover:text-white hover:bg-gradient-primary rounded-lg transition-all duration-200 border-2 border-primary-300 hover:border-primary-600 text-sm md:text-base font-semibold shadow-sm hover:shadow-glow"
             >
               <LogOut size={18} />
-              <span className="hidden sm:inline">logout()</span>
+              <span className="hidden sm:inline">{t('auth.logout')}</span>
             </button>
           </div>
         </div>

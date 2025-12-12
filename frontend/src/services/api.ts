@@ -30,7 +30,7 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiResponse<any>>) => {
+  (error: AxiosError<ApiResponse<unknown>>) => {
     if (error.response?.status === 401) {
       // Only redirect if not already on login/register page to avoid redirect loops
       const currentPath = window.location.pathname;

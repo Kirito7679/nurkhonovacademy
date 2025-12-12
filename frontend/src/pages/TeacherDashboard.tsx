@@ -1,10 +1,12 @@
 import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { ApiResponse, Course, User, StudentCourse } from '../types';
 import { Users, BookOpen, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 export default function TeacherDashboard() {
+  const { t } = useTranslation();
   const { data: statsResponse } = useQuery('teacherStats', async () => {
     const [studentsRes, coursesRes, requestsRes] = await Promise.all([
       api.get<ApiResponse<User[]>>('/students'),
@@ -18,7 +20,7 @@ export default function TeacherDashboard() {
 
     // Get pending requests
     const pendingRequests: StudentCourse[] = [];
-    allStudents.forEach((student: any) => {
+    allStudents.forEach((student: User & { studentCourses?: StudentCourse[] }) => {
       if (student.studentCourses) {
         student.studentCourses.forEach((sc: StudentCourse) => {
           if (sc.status === 'PENDING') {
@@ -39,29 +41,29 @@ export default function TeacherDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl md:text-4xl font-bold text-gradient mb-4 md:mb-8">Dashboard</h1>
+      <h1 className="text-2xl md:text-4xl font-bold text-gradient mb-4 md:mb-8">Панель управления</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-        <div className="card card-hover p-6">
+        <div className="card card-hover p-6 bg-gradient-to-br from-primary-50 to-blue-50">
           <div className="flex items-center">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-neon-glow to-neon-electric text-white shadow-lg shadow-neon-glow/50">
-              <Users className="h-6 w-6" />
+            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-primary text-white shadow-glow">
+              <Users className="h-7 w-7" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-400">Всего студентов</p>
-              <p className="text-2xl md:text-3xl font-bold text-white">{stats.totalStudents}</p>
+              <p className="text-sm font-semibold text-primary-700">{t('students.totalStudents', { defaultValue: 'Всего студентов' })}</p>
+              <p className="text-2xl md:text-3xl font-bold text-primary-900">{stats.totalStudents}</p>
             </div>
           </div>
         </div>
 
-        <div className="card card-hover p-6">
+        <div className="card card-hover p-6 bg-gradient-to-br from-accent-50 to-emerald-50">
           <div className="flex items-center">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-green-700 text-white shadow-lg shadow-green-500/50">
-              <BookOpen className="h-6 w-6" />
+            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-accent text-white shadow-glow">
+              <BookOpen className="h-7 w-7" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-400">Всего курсов</p>
-              <p className="text-2xl md:text-3xl font-bold text-white">{stats.totalCourses}</p>
+              <p className="text-sm font-semibold text-accent-700">{t('courses.totalCourses', { defaultValue: 'Всего курсов' })}</p>
+              <p className="text-2xl md:text-3xl font-bold text-accent-900">{stats.totalCourses}</p>
             </div>
           </div>
         </div>
@@ -69,38 +71,38 @@ export default function TeacherDashboard() {
 
       <div className="card p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
-          <h2 className="text-lg md:text-xl font-semibold text-white">Последние запросы на курсы</h2>
+          <h2 className="text-lg md:text-xl font-bold text-primary-900">{t('students.recentRequests', { defaultValue: 'Последние запросы на курсы' })}</h2>
           <Link
             to="/teacher/students"
-            className="text-neon-glow hover:text-neon-300 text-sm font-medium transition-colors"
+            className="text-primary-700 hover:text-primary-800 text-sm font-semibold transition-colors underline decoration-2 underline-offset-2"
           >
-            Посмотреть всех →
+            {t('students.viewAll', { defaultValue: 'Посмотреть всех' })} →
           </Link>
         </div>
 
         {stats.pendingRequests.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Нет ожидающих запросов</p>
+          <p className="text-primary-600 text-center py-8 font-medium">{t('students.noPendingRequests', { defaultValue: 'Нет ожидающих запросов' })}</p>
         ) : (
           <div className="space-y-4">
-            {stats.pendingRequests.map((request: any) => (
+            {stats.pendingRequests.map((request: StudentCourse) => (
               <div
                 key={request.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 md:p-4 border border-[#374151] rounded-lg hover:border-neon-glow/50 transition-colors bg-[#1f2937]/50"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 md:p-4 border-2 border-primary-200 rounded-lg hover:border-primary-400 transition-colors bg-gradient-to-r from-primary-50/50 to-transparent"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white break-words">
+                  <p className="font-semibold text-primary-900 break-words">
                     {request.student?.firstName} {request.student?.lastName}
                   </p>
-                  <p className="text-sm text-gray-400 break-words">{request.course?.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-sm text-primary-700 break-words">{request.course?.title}</p>
+                  <p className="text-xs text-primary-600 mt-1">
                     {new Date(request.purchaseRequestedAt).toLocaleDateString('ru-RU')}
                   </p>
                 </div>
                 <Link
                   to={`/teacher/students/${request.studentId}`}
-                  className="px-4 py-2 text-sm font-medium text-neon-glow hover:text-white border border-neon-glow/50 rounded-lg hover:bg-neon-glow/10 transition-all whitespace-nowrap"
+                  className="btn-secondary px-4 py-2 text-sm whitespace-nowrap"
                 >
-                  Рассмотреть
+                  {t('students.review', { defaultValue: 'Рассмотреть' })}
                 </Link>
               </div>
             ))}

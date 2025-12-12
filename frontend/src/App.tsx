@@ -14,6 +14,13 @@ import StudentDetails from './pages/StudentDetails';
 import TeacherCourses from './pages/TeacherCourses';
 import CourseForm from './pages/CourseForm';
 import LessonForm from './pages/LessonForm';
+import Chat from './pages/Chat';
+import TeacherChats from './pages/TeacherChats';
+import FlashcardDecks from './pages/FlashcardDecks';
+import FlashcardStudy from './pages/FlashcardStudy';
+import FlashcardDeckEdit from './pages/FlashcardDeckEdit';
+import PracticeExercises from './pages/PracticeExercises';
+import Integrations from './pages/Integrations';
 import Layout from './components/Layout';
 import { Role } from './types';
 
@@ -92,6 +99,54 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/chat"
+            element={
+              <PrivateRoute allowedRoles={[Role.STUDENT]}>
+                <Chat />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/flashcards"
+            element={
+              <PrivateRoute allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
+                <FlashcardDecks />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/flashcards/:id/study"
+            element={
+              <PrivateRoute allowedRoles={[Role.STUDENT]}>
+                <FlashcardStudy />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/flashcards/:id/edit"
+            element={
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
+                <FlashcardDeckEdit />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/lessons/:lessonId/practice"
+            element={
+              <PrivateRoute allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
+                <PracticeExercises />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/integrations"
+            element={
+              <PrivateRoute allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
+                <Integrations />
+              </PrivateRoute>
+            }
+          />
 
           {/* Teacher routes */}
           <Route
@@ -113,7 +168,7 @@ function App() {
           <Route
             path="/teacher/students"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR, Role.ASSISTANT]}>
                 <Students />
               </PrivateRoute>
             }
@@ -121,7 +176,7 @@ function App() {
           <Route
             path="/teacher/students/:id"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR, Role.ASSISTANT]}>
                 <StudentDetails />
               </PrivateRoute>
             }
@@ -129,7 +184,7 @@ function App() {
           <Route
             path="/teacher/courses"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
                 <TeacherCourses />
               </PrivateRoute>
             }
@@ -137,7 +192,7 @@ function App() {
           <Route
             path="/teacher/courses/new"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
                 <CourseForm />
               </PrivateRoute>
             }
@@ -145,7 +200,7 @@ function App() {
           <Route
             path="/teacher/courses/:id/edit"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
                 <CourseForm />
               </PrivateRoute>
             }
@@ -153,7 +208,7 @@ function App() {
           <Route
             path="/teacher/courses/:courseId/lessons/new"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
                 <LessonForm />
               </PrivateRoute>
             }
@@ -161,7 +216,7 @@ function App() {
           <Route
             path="/teacher/courses/:courseId/lessons/:lessonId/edit"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
                 <LessonForm />
               </PrivateRoute>
             }
@@ -171,6 +226,14 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
                 <Profile />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/teacher/chats"
+            element={
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+                <TeacherChats />
               </PrivateRoute>
             }
           />
