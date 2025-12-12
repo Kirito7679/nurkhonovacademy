@@ -13,6 +13,7 @@ import {
 } from '../utils/validation';
 import { upload } from './fileController';
 import { uploadAvatar as uploadAvatarToCloudinary, deleteFromCloudinary, extractPublicId } from '../services/cloudinaryService';
+import { uploadAvatar as uploadAvatarToSupabase, deleteFromSupabase, extractFilePath } from '../services/supabaseStorageService';
 import { deleteFile as deleteLocalFile } from '../services/fileService';
 import fs from 'fs/promises';
 
@@ -419,10 +420,30 @@ export const uploadAvatar = async (
       where: { id: req.user!.id },
     });
 
-    // Upload to Cloudinary if configured, otherwise use local storage
+    // Upload to cloud storage if configured, otherwise use local storage
     let fileUrl: string;
     
-    if (process.env.CLOUDINARY_CLOUD_NAME) {
+    if (process.env.SUPABASE_URL) {
+      // Upload to Supabase Storage
+      const fileBuffer = await fs.readFile(req.file.path);
+      const uploadResult = await uploadAvatarToSupabase(fileBuffer, req.file.originalname);
+      fileUrl = uploadResult.publicUrl;
+      
+      // Delete local file after upload
+      await deleteLocalFile(req.file.filename);
+      
+      // Delete old avatar from Supabase if exists
+      if (currentUser?.avatarUrl && currentUser.avatarUrl.includes('supabase.co')) {
+        const fileInfo = extractFilePath(currentUser.avatarUrl);
+        if (fileInfo) {
+          try {
+            await deleteFromSupabase(fileInfo.bucket, fileInfo.path);
+          } catch (error) {
+            console.error('Error deleting old avatar from Supabase:', error);
+          }
+        }
+      }
+    } else if (process.env.CLOUDINARY_CLOUD_NAME) {
       // Upload to Cloudinary
       const fileBuffer = await fs.readFile(req.file.path);
       const uploadResult = await uploadAvatarToCloudinary(fileBuffer);

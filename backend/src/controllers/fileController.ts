@@ -13,6 +13,7 @@ import {
   ensureUploadDir,
 } from '../services/fileService';
 import { uploadLessonFile as uploadLessonFileToCloudinary, deleteFromCloudinary, extractPublicId } from '../services/cloudinaryService';
+import { uploadLessonFile as uploadLessonFileToSupabase, deleteFromSupabase, extractFilePath } from '../services/supabaseStorageService';
 
 // Configure multer
 const storage = multer.diskStorage({
@@ -74,10 +75,18 @@ export const uploadFile = async (
       throw new AppError('Недостаточно прав для загрузки файлов к этому уроку', 403);
     }
 
-    // Upload to Cloudinary if configured, otherwise use local storage
+    // Upload to cloud storage if configured, otherwise use local storage
     let fileUrl: string;
     
-    if (process.env.CLOUDINARY_CLOUD_NAME) {
+    if (process.env.SUPABASE_URL) {
+      // Upload to Supabase Storage
+      const fileBuffer = await fs.readFile(req.file.path);
+      const uploadResult = await uploadLessonFileToSupabase(fileBuffer, req.file.originalname, req.file.mimetype);
+      fileUrl = uploadResult.publicUrl;
+      
+      // Delete local file after upload
+      await deleteLocalFile(req.file.filename);
+    } else if (process.env.CLOUDINARY_CLOUD_NAME) {
       // Upload to Cloudinary
       const fileBuffer = await fs.readFile(req.file.path);
       const uploadResult = await uploadLessonFileToCloudinary(fileBuffer, req.file.originalname);
@@ -171,10 +180,10 @@ export const downloadFile = async (
       throw new AppError('У вас нет доступа к этому файлу', 403);
     }
 
-    // Check if file is in Cloudinary or local storage
+    // Check if file is in cloud storage or local storage
     let filePath: string;
-    if (lessonFile.fileUrl.includes('cloudinary.com')) {
-      // File is in Cloudinary - redirect to Cloudinary URL
+    if (lessonFile.fileUrl.includes('supabase.co') || lessonFile.fileUrl.includes('cloudinary.com')) {
+      // File is in cloud storage - redirect to cloud URL
       return res.redirect(lessonFile.fileUrl);
     } else {
       // Extract filename from fileUrl (it's stored as filename in fileUrl field)
@@ -265,8 +274,13 @@ export const deleteFileById = async (
       throw new AppError('Недостаточно прав для удаления этого файла', 403);
     }
 
-    // Delete file from Cloudinary or local storage
-    if (lessonFile.fileUrl.includes('cloudinary.com')) {
+    // Delete file from cloud storage or local storage
+    if (lessonFile.fileUrl.includes('supabase.co')) {
+      const fileInfo = extractFilePath(lessonFile.fileUrl);
+      if (fileInfo) {
+        await deleteFromSupabase(fileInfo.bucket, fileInfo.path);
+      }
+    } else if (lessonFile.fileUrl.includes('cloudinary.com')) {
       const publicId = extractPublicId(lessonFile.fileUrl);
       if (publicId) {
         await deleteFromCloudinary(publicId, 'raw');
