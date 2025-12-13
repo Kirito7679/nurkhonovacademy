@@ -92,8 +92,34 @@ export default function LessonView() {
     }
   );
 
-  const handleDownload = (fileUrl: string, fileName: string) => {
-    window.open(fileUrl, '_blank');
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      // If file is from Supabase or Cloudinary (direct URL), open it directly
+      if (fileUrl.includes('supabase.co') || fileUrl.includes('cloudinary.com') || fileUrl.startsWith('http')) {
+        window.open(fileUrl, '_blank');
+      } else {
+        // If file is from local storage, use download endpoint
+        const fileId = fileUrl.replace('/api/files/download/', '');
+        const response = await api.get(`/files/download/${fileId}`, {
+          responseType: 'blob',
+        });
+        
+        // Create blob and download
+        const blob = new Blob([response.data]);
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      // Fallback: try to open URL directly
+      window.open(fileUrl, '_blank');
+    }
   };
 
   const handleVideoProgress = (progress: { playedSeconds: number }) => {
@@ -208,28 +234,48 @@ export default function LessonView() {
             {t('lessons.files', { defaultValue: 'Файлы урока' })}
           </h2>
           <div className="space-y-3">
-            {lesson.files.map((file) => (
-              <div
-                key={file.id}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 md:p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 hover:border-primary-300 transition-all group"
-              >
-                <div className="flex items-center">
-                  <Download className="h-5 w-5 text-primary-500 mr-3" />
-                  <div>
-                    <p className="font-medium text-neutral-900">{file.fileName}</p>
-                    <p className="text-sm text-neutral-500">
-                      {t('lessons.fileSize', { defaultValue: 'Размер' })}: {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDownload(file.fileUrl, file.fileName)}
-                  className="btn-secondary px-4 py-2 text-sm"
+            {lesson.files.map((file) => {
+              const isVideo = /\.(mp4|webm|mov|avi|wmv|flv|mpeg)$/i.test(file.fileName);
+              const isDocument = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i.test(file.fileName);
+              const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.fileName);
+              
+              return (
+                <div
+                  key={file.id}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 md:p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 hover:border-primary-300 transition-all group"
                 >
-                  Скачать
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center flex-1 min-w-0">
+                    <div className="flex-shrink-0 mr-3">
+                      {isDocument ? (
+                        <Download className="h-5 w-5 text-blue-500" />
+                      ) : isVideo ? (
+                        <BookOpen className="h-5 w-5 text-purple-500" />
+                      ) : isImage ? (
+                        <Download className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Download className="h-5 w-5 text-primary-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-neutral-900 truncate">{file.fileName}</p>
+                      <p className="text-sm text-neutral-500">
+                        {t('lessons.fileSize', { defaultValue: 'Размер' })}: {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                        {isVideo && <span className="ml-2 text-purple-600">• Видео</span>}
+                        {isDocument && <span className="ml-2 text-blue-600">• Документ</span>}
+                        {isImage && <span className="ml-2 text-green-600">• Изображение</span>}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDownload(file.fileUrl, file.fileName)}
+                    className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isVideo ? 'Смотреть' : 'Скачать'}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

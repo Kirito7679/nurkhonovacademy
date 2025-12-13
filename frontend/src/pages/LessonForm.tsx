@@ -1170,26 +1170,36 @@ export default function LessonForm() {
                   <input
                     type="file"
                     onChange={handleFileUpload}
-                    disabled={uploadingFile}
+                    disabled={uploadingFile || !lessonId}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.jpg,.jpeg,.png,.gif,.webp,.mp4,.webm,.ogg,.mov,.avi,.wmv,.flv,.mpeg"
                     className="hidden"
                   />
-                  <span className="flex items-center justify-center w-full px-4 py-2 border-2 border-dashed border-neutral-300 rounded-lg hover:border-primary-400 cursor-pointer transition-all hover:bg-primary-50">
+                  <span className="flex items-center justify-center w-full px-4 py-2 border-2 border-dashed border-neutral-300 rounded-lg hover:border-primary-400 cursor-pointer transition-all hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Upload className="h-5 w-5 mr-2 text-primary-500" />
                     {uploadingFile ? (
                       <span className="flex items-center gap-2">
                         <span className="animate-spin">⟳</span>
                         <span>Загрузка...</span>
                       </span>
+                    ) : !lessonId ? (
+                      <span className="text-neutral-500">Сначала сохраните урок</span>
                     ) : (
-                      <span>Загрузить файл</span>
+                      <span>Загрузить файл (PDF, DOC, видео, изображения и др.)</span>
                     )}
                   </span>
                 </label>
+                <p className="mt-2 text-xs text-neutral-500">
+                  Поддерживаются: документы (PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX), изображения (JPG, PNG, GIF, WebP), 
+                  видео (MP4, WebM, MOV, AVI и др.), архивы (ZIP). Максимальный размер: 100 MB
+                </p>
               </div>
 
               {files.length === 0 ? (
                 <div className="text-center py-4">
                   <p className="text-neutral-500">Нет файлов</p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Загрузите файлы к уроку (PDF, документы, видео и др.)
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1199,13 +1209,24 @@ export default function LessonForm() {
                       className="flex items-center justify-between p-3 border border-neutral-200 rounded-lg hover:border-primary-300 hover:bg-neutral-50 transition-all animate-slide-in"
                       style={{ animationDelay: `${0.1 * index}s` }}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-900 truncate">
-                          {file.fileName}
-                        </p>
-                        <p className="text-xs text-neutral-500">
-                          {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                        </p>
+                      <div className="flex items-center flex-1 min-w-0">
+                        <div className="flex-shrink-0 mr-3">
+                          {file.fileName.match(/\.(pdf|doc|docx)$/i) ? (
+                            <FileQuestion className="h-5 w-5 text-blue-500" />
+                          ) : file.fileName.match(/\.(mp4|webm|mov|avi)$/i) ? (
+                            <BookOpen className="h-5 w-5 text-purple-500" />
+                          ) : (
+                            <Upload className="h-5 w-5 text-primary-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-neutral-900 truncate">
+                            {file.fileName}
+                          </p>
+                          <p className="text-xs text-neutral-500">
+                            {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
                       </div>
                       <button
                         onClick={() => handleDeleteFile(file.id)}
