@@ -6,9 +6,22 @@ let supabase: SupabaseClient | null = null;
 
 const initSupabase = () => {
   if (!supabase && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+    // Validate that we're using service_role key, not anon key
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    
+    // Basic validation: service_role key should be a JWT token
+    if (!serviceKey.startsWith('eyJ')) {
+      console.error('SUPABASE_SERVICE_KEY does not appear to be a valid JWT token');
+    }
+    
     supabase = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY
+      serviceKey,
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
     );
   }
   return supabase;
