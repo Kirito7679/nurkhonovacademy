@@ -6,14 +6,9 @@ Supabase CLI успешно установлен локально в проек�
 
 ## 📋 Основные команды:
 
-**Важно**: Все команды нужно запускать из директории `backend/` или использовать `npm run supabase --`
+**Важно**: Все команды нужно запускать из директории `backend/` используя `npx supabase`
 
 ### Авторизация:
-```bash
-cd backend
-npm run supabase -- login
-```
-или
 ```bash
 cd backend
 npx supabase login
@@ -104,19 +99,19 @@ npm run supabase -- projects api-keys --project-ref czmkyqkibxrryjpjfdsb
 1. **Авторизуйтесь:**
    ```bash
    cd backend
-   npm run supabase -- login
+   npx supabase login
    ```
 
 2. **Свяжите проект (опционально):**
    ```bash
    cd backend
-   npm run supabase -- link --project-ref czmkyqkibxrryjpjfdsb
+   npx supabase link --project-ref czmkyqkibxrryjpjfdsb
    ```
 
 3. **Проверьте Storage bucket:**
    ```bash
    cd backend
-   npm run supabase -- storage list
+   npx supabase storage list
    ```
 
 ## 💡 Альтернатива: Установка через Homebrew (глобально)
