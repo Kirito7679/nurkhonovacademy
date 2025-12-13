@@ -423,25 +423,44 @@ export const uploadAvatar = async (
     // Upload to cloud storage if configured, otherwise use local storage
     let fileUrl: string;
     
-    if (process.env.SUPABASE_URL) {
-      // Upload to Supabase Storage
-      const fileBuffer = await fs.readFile(req.file.path);
-      const uploadResult = await uploadAvatarToSupabase(fileBuffer, req.file.originalname);
-      fileUrl = uploadResult.publicUrl;
-      
-      // Delete local file after upload
-      await deleteLocalFile(req.file.filename);
-      
-      // Delete old avatar from Supabase if exists
-      if (currentUser?.avatarUrl && currentUser.avatarUrl.includes('supabase.co')) {
-        const fileInfo = extractFilePath(currentUser.avatarUrl);
-        if (fileInfo) {
-          try {
-            await deleteFromSupabase(fileInfo.bucket, fileInfo.path);
-          } catch (error) {
-            console.error('Error deleting old avatar from Supabase:', error);
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+      try {
+        // Upload to Supabase Storage
+        const fileBuffer = await fs.readFile(req.file.path);
+        const uploadResult = await uploadAvatarToSupabase(fileBuffer, req.file.originalname);
+        fileUrl = uploadResult.publicUrl;
+        
+        // Delete local file after upload
+        await deleteLocalFile(req.file.filename);
+        
+        // Delete old avatar from Supabase if exists
+        if (currentUser?.avatarUrl && currentUser.avatarUrl.includes('supabase.co')) {
+          const fileInfo = extractFilePath(currentUser.avatarUrl);
+          if (fileInfo) {
+            try {
+              await deleteFromSupabase(fileInfo.bucket, fileInfo.path);
+            } catch (error) {
+              console.error('Error deleting old avatar from Supabase:', error);
+              // Don't throw, just log - old file deletion is not critical
+            }
           }
         }
+      } catch (supabaseError: any) {
+        console.error('Supabase upload error:', supabaseError);
+        await deleteLocalFile(req.file.filename);
+        
+        // If bucket doesn't exist, provide helpful error message
+        if (supabaseError.message?.includes('does not exist')) {
+          throw new AppError(
+            `Bucket 'avatars' не существует в Supabase Storage. Пожалуйста, создайте его в Supabase Dashboard: Storage → Create bucket → 'avatars'`,
+            500
+          );
+        }
+        
+        throw new AppError(
+          `Ошибка при загрузке в Supabase: ${supabaseError.message || 'Неизвестная ошибка'}`,
+          500
+        );
       }
     } else if (process.env.CLOUDINARY_CLOUD_NAME) {
       // Upload to Cloudinary
@@ -505,12 +524,26 @@ export const uploadAvatar = async (
       data: user,
       message: 'Фото профиля успешно загружено',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading avatar:', error);
     if (req.file) {
-      await deleteLocalFile(req.file.filename);
+      try {
+        await deleteLocalFile(req.file.filename);
+      } catch (deleteError) {
+        console.error('Error deleting temporary file:', deleteError);
+      }
     }
-    next(error);
+    
+    // If it's already an AppError, pass it through
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    
+    // Otherwise, wrap it in AppError
+    next(new AppError(
+      error.message || 'Ошибка при загрузке фото профиля',
+      error.statusCode || 500
+    ));
   }
 };
 

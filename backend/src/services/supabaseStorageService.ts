@@ -34,6 +34,18 @@ export const uploadToSupabase = async (
     throw new Error('Supabase not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_KEY');
   }
 
+  // Check if bucket exists
+  const { data: buckets, error: listError } = await client.storage.listBuckets();
+  if (listError) {
+    console.error('Error listing Supabase buckets:', listError);
+    throw new Error(`Failed to access Supabase Storage: ${listError.message}`);
+  }
+
+  const bucketExists = buckets?.some(b => b.name === bucket);
+  if (!bucketExists) {
+    throw new Error(`Bucket '${bucket}' does not exist in Supabase Storage. Please create it in the Supabase Dashboard.`);
+  }
+
   // Generate unique filename
   const ext = fileName.split('.').pop() || '';
   const uniqueFileName = `${uuidv4()}.${ext}`;
@@ -48,6 +60,7 @@ export const uploadToSupabase = async (
     });
 
   if (error) {
+    console.error('Supabase upload error:', error);
     throw new Error(`Failed to upload to Supabase: ${error.message}`);
   }
 
@@ -55,6 +68,10 @@ export const uploadToSupabase = async (
   const { data: urlData } = client.storage
     .from(bucket)
     .getPublicUrl(filePath);
+
+  if (!urlData?.publicUrl) {
+    throw new Error('Failed to get public URL from Supabase');
+  }
 
   return {
     path: filePath,
