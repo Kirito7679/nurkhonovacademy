@@ -5,17 +5,23 @@
 ### 1. Установлены правильные переменные Supabase:
 
 ✅ **SUPABASE_URL**: `https://czmkyqkibxrryjpjfdsb.supabase.co`
-✅ **SUPABASE_SERVICE_KEY**: service_role ключ установлен
+✅ **SUPABASE_SERVICE_KEY**: service_role ключ установлен (правильный ключ для Storage)
 
-### 2. Удалена неправильная переменная:
+### 2. Статус SUPABASE_ANON_KEY:
 
-❌ **SUPABASE_ANON_KEY**: удалена (если была)
+⚠️ **SUPABASE_ANON_KEY**: все еще присутствует в Railway, но это не проблема
+- Код использует только `SUPABASE_SERVICE_KEY` для работы с Storage
+- `SUPABASE_ANON_KEY` не используется и не мешает работе
+- Можно удалить вручную через Railway Dashboard, если хотите
 
 ## Текущее состояние:
 
-Теперь в Railway установлены только правильные переменные:
-- `SUPABASE_URL` - URL проекта Supabase
-- `SUPABASE_SERVICE_KEY` - service_role ключ для работы с Storage
+В Railway установлены переменные:
+- ✅ `SUPABASE_URL` - URL проекта Supabase (правильно)
+- ✅ `SUPABASE_SERVICE_KEY` - service_role ключ для работы с Storage (правильно)
+- ⚠️ `SUPABASE_ANON_KEY` - присутствует, но не используется кодом (можно оставить или удалить)
+
+**Важно:** Код использует только `SUPABASE_SERVICE_KEY`, поэтому наличие `SUPABASE_ANON_KEY` не мешает работе.
 
 ## Что дальше:
 
