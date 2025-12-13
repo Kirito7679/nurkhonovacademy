@@ -51,6 +51,17 @@ export const uploadToSupabase = async (
   const { data: buckets, error: listError } = await client.storage.listBuckets();
   if (listError) {
     console.error('Error listing Supabase buckets:', listError);
+    
+    // Provide helpful error message for common issues
+    if (listError.message?.includes('signature') || listError.message?.includes('verification')) {
+      throw new Error(
+        `Signature verification failed. This usually means you're using the wrong Supabase key. ` +
+        `Please ensure you're using SUPABASE_SERVICE_KEY (service_role key), not SUPABASE_ANON_KEY. ` +
+        `Get the service_role key from Supabase Dashboard → Settings → API → service_role key. ` +
+        `Original error: ${listError.message}`
+      );
+    }
+    
     throw new Error(`Failed to access Supabase Storage: ${listError.message}`);
   }
 
