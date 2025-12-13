@@ -51,7 +51,7 @@ export const validateFile = (file: Express.Multer.File): { valid: boolean; error
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    return { valid: false, error: 'Размер файла превышает 50MB' };
+    return { valid: false, error: `Размер файла превышает ${MAX_FILE_SIZE / 1024 / 1024}MB` };
   }
 
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
