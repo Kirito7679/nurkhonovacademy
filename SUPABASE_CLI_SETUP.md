@@ -18,7 +18,7 @@ npx supabase login
 ### Связывание с проектом:
 ```bash
 cd backend
-npm run supabase -- link --project-ref czmkyqkibxrryjpjfdsb
+npx supabase link --project-ref czmkyqkibxrryjpjfdsb
 ```
 Связывает текущую директорию с вашим Supabase проектом.
 
@@ -27,32 +27,33 @@ npm run supabase -- link --project-ref czmkyqkibxrryjpjfdsb
 #### Просмотр bucket:
 ```bash
 cd backend
-npm run supabase -- storage list
+npx supabase storage ls
 ```
 
-#### Создание bucket:
-```bash
-cd backend
-npm run supabase -- storage create avatars --public
-npm run supabase -- storage create lessons --public
-```
+#### Создание bucket (через Dashboard):
+⚠️ **Важно**: Bucket создаются через Supabase Dashboard, а не через CLI.
+
+1. Откройте Supabase Dashboard → Storage
+2. Нажмите "New bucket"
+3. Создайте `avatars` (публичный, 5MB)
+4. Создайте `lessons` (публичный, 100MB)
 
 #### Загрузка файла:
 ```bash
 cd backend
-npm run supabase -- storage upload avatars ./path/to/file.jpg
+npx supabase storage cp ./path/to/file.jpg avatars/file.jpg
 ```
 
 #### Список файлов в bucket:
 ```bash
 cd backend
-npm run supabase -- storage list avatars
+npx supabase storage ls avatars
 ```
 
 #### Удаление файла:
 ```bash
 cd backend
-npm run supabase -- storage remove avatars file.jpg
+npx supabase storage rm avatars/file.jpg
 ```
 
 ### Управление базой данных:
@@ -60,13 +61,13 @@ npm run supabase -- storage remove avatars file.jpg
 #### Просмотр таблиц:
 ```bash
 cd backend
-npm run supabase -- db list
+npx supabase db list
 ```
 
 #### Выполнение SQL:
 ```bash
 cd backend
-npm run supabase -- db execute "SELECT * FROM users LIMIT 10;"
+npx supabase db execute "SELECT * FROM users LIMIT 10;"
 ```
 
 ### Полезные команды:
@@ -74,19 +75,19 @@ npm run supabase -- db execute "SELECT * FROM users LIMIT 10;"
 #### Статус проекта:
 ```bash
 cd backend
-npm run supabase -- status
+npx supabase status
 ```
 
 #### Информация о проекте:
 ```bash
 cd backend
-npm run supabase -- projects list
+npx supabase projects list
 ```
 
 #### Получение API ключей:
 ```bash
 cd backend
-npm run supabase -- projects api-keys --project-ref czmkyqkibxrryjpjfdsb
+npx supabase projects api-keys --project-ref czmkyqkibxrryjpjfdsb
 ```
 
 ## 🔗 Ваш проект:
