@@ -75,13 +75,17 @@ export const uploadAvatar = async (
 };
 
 /**
- * Upload lesson file (PDFs, documents, etc.)
+ * Upload lesson file (PDFs, documents, videos, etc.)
  */
 export const uploadLessonFile = async (
   buffer: Buffer,
   originalName: string,
   contentType: string
 ): Promise<UploadResult> => {
+  // Determine resource type for Supabase
+  const isVideo = contentType.startsWith('video/');
+  const resourceType = isVideo ? 'video' : 'auto';
+  
   return uploadToSupabase(buffer, 'lessons', originalName, contentType);
 };
 

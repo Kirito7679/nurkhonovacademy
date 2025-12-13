@@ -15,6 +15,7 @@ export const ensureUploadDir = async () => {
 
 // Allowed file types
 const ALLOWED_MIME_TYPES = [
+  // Documents
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -23,14 +24,26 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'text/plain',
+  // Images
   'image/jpeg',
   'image/png',
   'image/gif',
+  'image/webp',
+  // Videos
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+  'video/quicktime', // .mov
+  'video/x-msvideo', // .avi
+  'video/x-ms-wmv', // .wmv
+  'video/x-flv', // .flv
+  'video/mpeg',
+  // Archives
   'application/zip',
   'application/x-zip-compressed',
 ];
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB (увеличено для видео)
 
 export const validateFile = (file: Express.Multer.File): { valid: boolean; error?: string } => {
   if (!file) {
