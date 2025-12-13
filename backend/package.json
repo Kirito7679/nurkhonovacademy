@@ -18,7 +18,8 @@
     "prisma:studio": "prisma studio",
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts",
-    "clear-db": "tsx scripts/clearDatabase.ts"
+    "clear-db": "tsx scripts/clearDatabase.ts",
+    "supabase": "supabase"
   },
   "keywords": [],
   "author": "",
@@ -51,6 +52,7 @@
     "@types/uuid": "^9.0.7",
     "jest": "^30.2.0",
     "prisma": "^5.7.1",
+    "supabase": "^2.67.1",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.6",
     "tsx": "^4.7.0",
