@@ -98,6 +98,8 @@ export default function Profile() {
       onSuccess: (updatedUser) => {
         if (updatedUser) {
           updateUser(updatedUser);
+          // Force refetch to get latest data
+          queryClient.setQueryData('me', updatedUser);
           queryClient.invalidateQueries('me');
           setSuccessModalTitle('Успешно!');
           setSuccessModalMessage('Фото профиля успешно загружено');
@@ -196,14 +198,19 @@ export default function Profile() {
             >
               {userResponse?.avatarUrl ? (
                 <img
+                  key={userResponse.avatarUrl} // Force re-render when URL changes
                   src={userResponse.avatarUrl?.startsWith('http') 
                     ? userResponse.avatarUrl 
                     : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://api.academy.dilmurodnurkhonov.uz'}${userResponse.avatarUrl}`}
                   alt={`${userResponse.firstName} ${userResponse.lastName}`}
                   className="w-full h-full object-cover"
                   onError={(e) => {
+                    console.error('Error loading avatar:', userResponse.avatarUrl);
                     // Fallback to icon if image fails to load
                     e.currentTarget.style.display = 'none';
+                  }}
+                  onLoad={() => {
+                    console.log('Avatar loaded successfully:', userResponse.avatarUrl);
                   }}
                 />
               ) : (
