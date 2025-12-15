@@ -36,7 +36,15 @@ export const getTeacherChats = async (
 
     // For teachers, get only students enrolled in their courses
     // For admins, get all students
-    let allStudents;
+    type StudentData = {
+      id: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      avatarUrl: string | null;
+    };
+    
+    let allStudents: StudentData[] = [];
     if (req.user?.role === 'TEACHER') {
       // Get students enrolled in teacher's courses
       const teacherCourses = await prisma.course.findMany({
