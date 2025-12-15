@@ -6,7 +6,7 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 1000 : 200, // В production увеличен лимит до 200
+  max: isDevelopment ? 1000 : 1000, // В production увеличен лимит до 1000 запросов за 15 минут
   message: 'Слишком много запросов с этого IP, попробуйте позже',
   standardHeaders: true,
   legacyHeaders: false,
@@ -29,10 +29,11 @@ export const commentLimiter = rateLimit({
 // Rate limiter for authentication
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 20 : 100, // В production 20 попыток, в dev больше
-  message: 'Слишком много попыток входа. Пожалуйста, попробуйте позже.',
+  max: process.env.NODE_ENV === 'production' ? 100 : 200, // В production 100 попыток за 15 минут (увеличено для решения проблем с авторизацией)
+  message: 'Слишком много попыток входа. Пожалуйста, подождите несколько минут и попробуйте снова.',
   standardHeaders: true,
   legacyHeaders: false,
   // Не используем кастомный keyGenerator - библиотека сама правильно обработает IP за прокси
+  skipSuccessfulRequests: true, // Не считать успешные запросы в лимит
 });
 

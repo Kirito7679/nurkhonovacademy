@@ -125,11 +125,33 @@ export const uploadFile = async (
       fileUrl = `/api/files/download/${req.file.filename}`;
     }
 
+    // Decode fileName if it's incorrectly encoded
+    let decodedFileName = req.file.originalname;
+    try {
+      // Try to decode if it looks like it's encoded (contains encoded characters)
+      if (req.file.originalname.includes('%') || /[^\x00-\x7F]/.test(req.file.originalname)) {
+        // Try different decoding methods
+        try {
+          decodedFileName = decodeURIComponent(req.file.originalname);
+        } catch {
+          // If that fails, try Buffer decoding
+          try {
+            decodedFileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+          } catch {
+            // If all fails, use original
+            decodedFileName = req.file.originalname;
+          }
+        }
+      }
+    } catch {
+      decodedFileName = req.file.originalname;
+    }
+
     // Create file record
     const lessonFile = await prisma.lessonFile.create({
       data: {
         lessonId,
-        fileName: req.file.originalname,
+        fileName: decodedFileName,
         fileUrl, // Store Cloudinary URL or local path
         fileSize: req.file.size,
       },
@@ -222,24 +244,37 @@ export const downloadFile = async (
     }
 
     // Check if file is in cloud storage or local storage
-    let filePath: string;
-    if (lessonFile.fileUrl.includes('supabase.co') || lessonFile.fileUrl.includes('cloudinary.com')) {
+    if (lessonFile.fileUrl.includes('supabase.co') || lessonFile.fileUrl.includes('cloudinary.com') || lessonFile.fileUrl.startsWith('http')) {
       // File is in cloud storage - redirect to cloud URL
       return res.redirect(lessonFile.fileUrl);
     } else {
       // Extract filename from fileUrl (it's stored as filename in fileUrl field)
       const fileName = lessonFile.fileUrl.replace('/api/files/download/', '');
-      filePath = getFilePath(fileName);
-    }
-
-    res.download(filePath, lessonFile.fileName, (err) => {
-      if (err) {
-        console.error('Error downloading file:', err);
-        if (!res.headersSent) {
-          next(new AppError('Ошибка при скачивании файла', 500));
+      const filePath = getFilePath(fileName);
+      
+      // Check if file exists locally
+      try {
+        await fs.access(filePath);
+      } catch (error) {
+        // File doesn't exist locally - might be in cloud storage but URL wasn't updated
+        // Try to return the fileUrl as-is if it's a valid URL
+        if (lessonFile.fileUrl.startsWith('http')) {
+          return res.redirect(lessonFile.fileUrl);
         }
+        // If it's a UUID (fileId), the file might have been moved to cloud storage
+        // Return 404 with helpful message
+        throw new AppError('Файл не найден. Возможно, он был перемещен в облачное хранилище.', 404);
       }
-    });
+      
+      res.download(filePath, lessonFile.fileName, (err) => {
+        if (err) {
+          console.error('Error downloading file:', err);
+          if (!res.headersSent) {
+            next(new AppError('Ошибка при скачивании файла', 500));
+          }
+        }
+      });
+    }
   } catch (error) {
     next(error);
   }
