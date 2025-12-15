@@ -12,6 +12,11 @@ export const createStudent = async (
   next: NextFunction
 ) => {
   try {
+    // Только админ может создавать студентов
+    if (req.user?.role !== 'ADMIN') {
+      throw new AppError('Только администратор может создавать студентов', 403);
+    }
+
     const validatedData = createStudentSchema.parse(req.body);
 
     // Check if user already exists
@@ -68,6 +73,8 @@ export const getAllStudents = async (
 ) => {
   try {
     const { search, courseId, status } = req.query;
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
 
     const where: any = {
       role: 'STUDENT',
@@ -81,7 +88,48 @@ export const getAllStudents = async (
       ];
     }
 
+    // For teachers, show only students enrolled in their courses
+    if (userRole === 'TEACHER') {
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId: userId },
+        select: { id: true },
+      });
+      const courseIds = teacherCourses.map(c => c.id);
+      
+      if (courseIds.length === 0) {
+        // Teacher has no courses, return empty array
+        return res.json({
+          success: true,
+          data: [],
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 0,
+          },
+        });
+      }
+      
+      where.studentCourses = {
+        some: {
+          courseId: { in: courseIds },
+        },
+      };
+    }
+
     if (courseId) {
+      // Verify course access for teachers
+      if (userRole === 'TEACHER') {
+        const course = await prisma.course.findUnique({
+          where: { id: courseId as string },
+          select: { teacherId: true },
+        });
+        
+        if (!course || course.teacherId !== userId) {
+          throw new AppError('У вас нет доступа к этому курсу', 403);
+        }
+      }
+      
       where.studentCourses = {
         some: {
           courseId: courseId as string,

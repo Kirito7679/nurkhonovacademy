@@ -34,20 +34,80 @@ export const getTeacherChats = async (
       ];
     }
 
-    // Get all students
-    const allStudents = await prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        avatarUrl: true,
-      },
-      orderBy: {
-        firstName: 'asc',
-      },
-    });
+    // For teachers, get only students enrolled in their courses
+    // For admins, get all students
+    let allStudents;
+    if (req.user?.role === 'TEACHER') {
+      // Get students enrolled in teacher's courses
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId },
+        select: { id: true },
+      });
+      const courseIds = teacherCourses.map(c => c.id);
+      
+      if (courseIds.length === 0) {
+        allStudents = [];
+      } else {
+        // Get student IDs enrolled in teacher's courses
+        const studentCourses = await prisma.studentCourse.findMany({
+          where: {
+            courseId: { in: courseIds },
+          },
+          select: {
+            studentId: true,
+          },
+        });
+        
+        const studentIds = [...new Set(studentCourses.map(sc => sc.studentId))];
+        
+        if (studentIds.length === 0) {
+          allStudents = [];
+        } else {
+          // Build where clause with student IDs and search
+          const studentWhere: any = {
+            id: { in: studentIds },
+            role: 'STUDENT',
+          };
+          
+          if (search && typeof search === 'string') {
+            studentWhere.OR = [
+              { firstName: { contains: search } },
+              { lastName: { contains: search } },
+              { phone: { contains: search } },
+            ];
+          }
+          
+          allStudents = await prisma.user.findMany({
+            where: studentWhere,
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              avatarUrl: true,
+            },
+            orderBy: {
+              firstName: 'asc',
+            },
+          });
+        }
+      }
+    } else {
+      // Admin: get all students
+      allStudents = await prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          avatarUrl: true,
+        },
+        orderBy: {
+          firstName: 'asc',
+        },
+      });
+    }
 
     // Get students with their last message and unread count
     const students = await Promise.all(

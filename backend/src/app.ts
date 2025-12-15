@@ -20,6 +20,7 @@ import integrationRoutes from './routes/integrationRoutes';
 import activityLogRoutes from './routes/activityLogRoutes';
 import classRoutes from './routes/classRoutes';
 import classChatRoutes from './routes/classChatRoutes';
+import curatorRoutes from './routes/curatorRoutes';
 import { errorHandler } from './utils/errors';
 import { ensureUploadDir } from './services/fileService';
 import { apiLimiter } from './middleware/rateLimit';
@@ -89,6 +90,7 @@ app.use('/api/integrations', integrationRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api', classChatRoutes);
+app.use('/api/curators', curatorRoutes);
 
 // Log registered routes for debugging
 console.log('✅ Routes registered:');
@@ -110,6 +112,7 @@ console.log('  - /api/integrations');
 console.log('  - /api/activity-logs');
 console.log('  - /api/classes');
 console.log('  - /api/classes/:classId/messages (group chat)');
+console.log('  - /api/curators');
 
 // Health check
 app.get('/api/health', (req, res) => {

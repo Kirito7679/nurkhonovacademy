@@ -19,7 +19,7 @@ model User {
   password  String
   avatarUrl String?
   telegram  String? // Telegram username or link
-  role      String   @default("STUDENT") // STUDENT, TEACHER, ADMIN, MODERATOR, ASSISTANT
+  role      String   @default("STUDENT") // STUDENT, TEACHER, ADMIN, MODERATOR, ASSISTANT, CURATOR
   language  String   @default("ru") // ru, en, uz - язык интерфейса
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

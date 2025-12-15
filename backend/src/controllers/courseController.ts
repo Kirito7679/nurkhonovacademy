@@ -33,8 +33,8 @@ export const getAllCourses = async (
       ];
     }
 
-    // For teachers/admins, filter by their courses
-    if (req.user.role === 'TEACHER' && req.query.myCourses === 'true') {
+    // For teachers, show only their own courses (not all courses like admin)
+    if (req.user.role === 'TEACHER') {
       where.teacherId = req.user.id;
     }
 
@@ -141,7 +141,7 @@ export const getAllCourses = async (
         data: coursesWithAccess,
       });
     } else {
-      // For teachers/admins, return courses as is
+      // For teachers, return only their courses; for admins, return all
       res.json({
         success: true,
         data: courses,

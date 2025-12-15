@@ -4,6 +4,7 @@ export enum Role {
   ADMIN = 'ADMIN',
   MODERATOR = 'MODERATOR',
   ASSISTANT = 'ASSISTANT',
+  CURATOR = 'CURATOR',
 }
 
 export type SupportedLanguage = 'ru' | 'en' | 'uz';
