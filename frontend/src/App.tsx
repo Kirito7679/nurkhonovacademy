@@ -23,6 +23,7 @@ import PracticeExercises from './pages/PracticeExercises';
 import Integrations from './pages/Integrations';
 import Classes from './pages/Classes';
 import ClassDetails from './pages/ClassDetails';
+import ClassChat from './pages/ClassChat';
 import Layout from './components/Layout';
 import { Role } from './types';
 
@@ -260,6 +261,14 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
                 <ClassDetails />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/classes/:id/chat"
+            element={
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.STUDENT]}>
+                <ClassChat />
               </PrivateRoute>
             }
           />

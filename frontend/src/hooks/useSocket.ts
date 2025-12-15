@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 import { useQueryClient } from 'react-query';
@@ -26,9 +26,13 @@ export const useSocket = () => {
   const { token } = useAuthStore();
   const queryClient = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setIsConnected(false);
+      return;
+    }
 
     // Connect to socket server
     const socket = io(SOCKET_URL, {
@@ -46,11 +50,11 @@ export const useSocket = () => {
     });
 
     socket.on('connect', () => {
-      // Socket connected successfully
+      setIsConnected(true);
     });
 
     socket.on('disconnect', () => {
-      // Socket disconnected
+      setIsConnected(false);
     });
 
     socket.on('error', (error) => {
@@ -62,10 +66,14 @@ export const useSocket = () => {
 
     return () => {
       socket.disconnect();
+      setIsConnected(false);
     };
   }, [token, queryClient]);
 
-  return socketRef.current;
+  return {
+    socket: socketRef.current,
+    isConnected,
+  };
 };
 
 

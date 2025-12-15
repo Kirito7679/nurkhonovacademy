@@ -77,6 +77,17 @@ export const initializeSocket = (httpServer: HttpServer) => {
       console.log(`User ${userId} left lesson ${lessonId}`);
     });
 
+    // Join class chat room
+    socket.on('join-class-chat', (classId: string) => {
+      socket.join(`class-chat:${classId}`);
+      console.log(`User ${userId} joined class chat ${classId}`);
+    });
+
+    socket.on('leave-class-chat', (classId: string) => {
+      socket.leave(`class-chat:${classId}`);
+      console.log(`User ${userId} left class chat ${classId}`);
+    });
+
     socket.on('disconnect', () => {
       console.log(`User ${userId} disconnected from socket`);
     });
@@ -95,6 +106,20 @@ export const emitCommentUpdate = (lessonId: string, comment: any) => {
   if (io) {
     // Emit to all users viewing this lesson
     io.to(`lesson:${lessonId}`).emit('new-comment', comment);
+  }
+};
+
+export const emitClassMessage = (classId: string, message: any) => {
+  if (io) {
+    // Emit to all users in the class chat room
+    io.to(`class-chat:${classId}`).emit('new-class-message', message);
+  }
+};
+
+export const emitClassMessageDeleted = (classId: string, messageId: string) => {
+  if (io) {
+    // Emit to all users in the class chat room
+    io.to(`class-chat:${classId}`).emit('class-message-deleted', { messageId });
   }
 };
 

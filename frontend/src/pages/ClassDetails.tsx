@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import api from '../services/api';
 import { ApiResponse, Class, ClassStudent, ApiError, EnrollmentStatus } from '../types';
-import { ArrowLeft, Users, Calendar, Settings, Plus, Trash2, UserCheck, UserX, Edit } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Settings, Plus, Trash2, UserCheck, UserX, Edit, MessageSquare } from 'lucide-react';
 import ClassFormModal from '../components/ClassFormModal';
 
 export default function ClassDetails() {
@@ -150,6 +150,13 @@ export default function ClassDetails() {
           <p className="text-neutral-600 mt-1">{classData.description || 'Нет описания'}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/classes/${id}/chat`)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Групповой чат
+          </button>
           <button
             onClick={() => setShowEditModal(true)}
             className="btn-secondary flex items-center gap-2"

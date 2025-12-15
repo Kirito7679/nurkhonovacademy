@@ -41,6 +41,7 @@ model User {
   // Group Classes relations
   teacherClasses Class[]        @relation("TeacherClasses")
   studentClasses ClassStudent[] @relation("StudentClasses")
+  classMessages  ClassMessage[] @relation("ClassMessageSender")
 
   @@map("users")
 }
@@ -473,6 +474,7 @@ model Class {
 
   // Связи
   students ClassStudent[]
+  messages ClassMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -513,4 +515,23 @@ enum EnrollmentStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// Групповой чат класса
+model ClassMessage {
+  id        String   @id @default(uuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation("ClassMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+  fileUrl   String? // URL к прикрепленному файлу
+  fileName  String? // Оригинальное имя файла
+  fileSize  Int? // Размер файла в байтах
+  createdAt DateTime @default(now())
+
+  @@index([classId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("class_messages")
 }
