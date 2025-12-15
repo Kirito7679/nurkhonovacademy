@@ -20,10 +20,52 @@ export const exportStudents = async (
   next: NextFunction
 ) => {
   try {
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
+    
+    // For teachers, get only students enrolled in their courses
+    let where: any = {
+      role: 'STUDENT',
+    };
+    
+    if (userRole === 'TEACHER') {
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId: userId },
+        select: { id: true },
+      });
+      const courseIds = teacherCourses.map(c => c.id);
+      
+      if (courseIds.length === 0) {
+        // Teacher has no courses, return empty CSV
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="students.csv"');
+        res.send('\uFEFF'); // BOM for Excel
+        return;
+      }
+      
+      const studentCourses = await prisma.studentCourse.findMany({
+        where: {
+          courseId: { in: courseIds },
+        },
+        select: {
+          studentId: true,
+        },
+      });
+      
+      const studentIds = [...new Set(studentCourses.map(sc => sc.studentId))];
+      
+      if (studentIds.length === 0) {
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="students.csv"');
+        res.send('\uFEFF'); // BOM for Excel
+        return;
+      }
+      
+      where.id = { in: studentIds };
+    }
+    
     const students = await prisma.user.findMany({
-      where: {
-        role: 'STUDENT',
-      },
+      where,
       include: {
         studentCourses: {
           include: {
