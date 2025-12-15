@@ -427,3 +427,46 @@ export interface StudentWithCourses extends User {
   progress?: StudentProgress[];
 }
 
+// Group Classes Types
+export enum ClassStatus {
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  ARCHIVED = 'ARCHIVED',
+}
+
+export enum EnrollmentStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export interface ClassStudent {
+  id: string;
+  classId: string;
+  studentId: string;
+  status: EnrollmentStatus;
+  enrolledAt: string;
+  approvedAt?: string | null;
+  student?: User;
+  class?: Class;
+}
+
+export interface Class {
+  id: string;
+  name: string;
+  description?: string | null;
+  teacherId: string;
+  maxStudents: number;
+  level?: string | null; // "Beginner", "Intermediate", "Advanced"
+  language?: string | null;
+  status: ClassStatus;
+  createdAt: string;
+  updatedAt: string;
+  teacher?: User;
+  students?: ClassStudent[];
+  _count?: {
+    students: number;
+  };
+}
+

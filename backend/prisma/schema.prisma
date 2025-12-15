@@ -18,25 +18,29 @@ model User {
   email     String?
   password  String
   avatarUrl String?
-  telegram  String?  // Telegram username or link
+  telegram  String? // Telegram username or link
   role      String   @default("STUDENT") // STUDENT, TEACHER, ADMIN, MODERATOR, ASSISTANT
   language  String   @default("ru") // ru, en, uz - язык интерфейса
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  coursesAsTeacher Course[] @relation("CourseTeacher")
-  studentCourses   StudentCourse[]
-  progress         StudentProgress[]
-  comments         Comment[]
-  notifications    Notification[]
-  quizResults      QuizResult[]
-  sentMessages     Message[] @relation("MessageSender")
-  receivedMessages Message[] @relation("MessageReceiver")
-  activityLogs     ActivityLog[]
-  flashcardDecks   FlashcardDeck[]
+  coursesAsTeacher  Course[]            @relation("CourseTeacher")
+  studentCourses    StudentCourse[]
+  progress          StudentProgress[]
+  comments          Comment[]
+  notifications     Notification[]
+  quizResults       QuizResult[]
+  sentMessages      Message[]           @relation("MessageSender")
+  receivedMessages  Message[]           @relation("MessageReceiver")
+  activityLogs      ActivityLog[]
+  flashcardDecks    FlashcardDeck[]
   flashcardProgress FlashcardProgress[]
-  practiceResults  PracticeResult[]
+  practiceResults   PracticeResult[]
+
+  // Group Classes relations
+  teacherClasses Class[]        @relation("TeacherClasses")
+  studentClasses ClassStudent[] @relation("StudentClasses")
 
   @@map("users")
 }
@@ -54,12 +58,12 @@ model Course {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  teacher       User            @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
-  modules       Module[]
-  lessons       Lesson[]
+  teacher        User                  @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  modules        Module[]
+  lessons        Lesson[]
   studentCourses StudentCourse[]
   flashcardDecks FlashcardDeck[]
-  integrations  ExternalIntegration[]
+  integrations   ExternalIntegration[]
 
   @@map("courses")
 }
@@ -74,38 +78,38 @@ model Module {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons     Lesson[]
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
 
-  @@map("modules")
   @@index([courseId])
+  @@map("modules")
 }
 
 model Lesson {
   id          String   @id @default(uuid())
   courseId    String
-  moduleId    String?  // Optional for backward compatibility
+  moduleId    String? // Optional for backward compatibility
   title       String
   description String?
   order       Int      @default(0)
-  videoUrl    String?  // YouTube embed URL
+  videoUrl    String? // YouTube embed URL
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  module      Module?          @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  files       LessonFile[]
-  progress    StudentProgress[]
-  comments    Comment[]
-  quiz        Quiz?
-  flashcardDecks FlashcardDeck[]
+  course            Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module            Module?               @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  files             LessonFile[]
+  progress          StudentProgress[]
+  comments          Comment[]
+  quiz              Quiz?
+  flashcardDecks    FlashcardDeck[]
   practiceExercises PracticeExercise[]
-  integrations  ExternalIntegration[]
+  integrations      ExternalIntegration[]
 
-  @@map("lessons")
   @@index([courseId])
   @@index([moduleId])
+  @@map("lessons")
 }
 
 model LessonFile {
@@ -113,53 +117,53 @@ model LessonFile {
   lessonId  String
   fileName  String
   fileUrl   String
-  fileSize  Int      // in bytes
+  fileSize  Int // in bytes
   createdAt DateTime @default(now())
 
   // Relations
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  @@map("lesson_files")
   @@index([lessonId])
+  @@map("lesson_files")
 }
 
 model StudentCourse {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   studentId           String
   courseId            String
-  status              String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  purchaseRequestedAt DateTime            @default(now())
+  status              String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  purchaseRequestedAt DateTime  @default(now())
   approvedAt          DateTime?
-  approvedBy          String?             // teacherId who approved
-  accessStartDate     DateTime?           // Дата начала доступа к курсу
-  accessEndDate       DateTime?           // Дата окончания доступа к курсу (null = бессрочный доступ)
+  approvedBy          String? // teacherId who approved
+  accessStartDate     DateTime? // Дата начала доступа к курсу
+  accessEndDate       DateTime? // Дата окончания доступа к курсу (null = бессрочный доступ)
 
   // Relations
-  student             User                @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  course              Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, courseId])
-  @@map("student_courses")
   @@index([studentId])
   @@index([courseId])
+  @@map("student_courses")
 }
 
 model StudentProgress {
-  id          String   @id @default(uuid())
-  studentId   String
-  lessonId    String
-  completed   Boolean  @default(false)
-  watchedAt   DateTime?
-  lastPosition Int?    @default(0) // video position in seconds
+  id           String    @id @default(uuid())
+  studentId    String
+  lessonId     String
+  completed    Boolean   @default(false)
+  watchedAt    DateTime?
+  lastPosition Int?      @default(0) // video position in seconds
 
   // Relations
-  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, lessonId])
-  @@map("student_progress")
   @@index([studentId])
   @@index([lessonId])
+  @@map("student_progress")
 }
 
 model Comment {
@@ -167,155 +171,155 @@ model Comment {
   lessonId  String
   userId    String
   content   String
-  parentId  String?  // For replies (null for top-level comments)
+  parentId  String? // For replies (null for top-level comments)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Comment[] @relation("CommentReplies")
+  lesson  Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
 
-  @@map("comments")
   @@index([lessonId])
   @@index([userId])
   @@index([parentId])
+  @@map("comments")
 }
 
 model Notification {
   id        String   @id @default(uuid())
-  userId    String   // User who should receive the notification
-  type      String   // COMMENT, COURSE_REQUEST, COURSE_APPROVED, COURSE_REJECTED
+  userId    String // User who should receive the notification
+  type      String // COMMENT, COURSE_REQUEST, COURSE_APPROVED, COURSE_REJECTED
   title     String
   message   String
-  link      String?  // URL to navigate to
+  link      String? // URL to navigate to
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("notifications")
   @@index([userId])
   @@index([read])
   @@index([createdAt])
+  @@map("notifications")
 }
 
 model Quiz {
-  id          String   @id @default(uuid())
-  lessonId    String   @unique
-  title       String?
-  description String?
+  id           String   @id @default(uuid())
+  lessonId     String   @unique
+  title        String?
+  description  String?
   passingScore Int      @default(70) // Minimum score percentage to pass
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  lesson      Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  questions   QuizQuestion[]
-  results     QuizResult[]
+  lesson    Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  results   QuizResult[]
 
-  @@map("quizzes")
   @@index([lessonId])
+  @@map("quizzes")
 }
 
 model QuizQuestion {
-  id          String   @id @default(uuid())
-  quizId      String
-  question    String
-  type        String   @default("MULTIPLE_CHOICE") // MULTIPLE_CHOICE, TRUE_FALSE, DRAG_DROP, MATCHING, FILL_BLANK
-  order       Int      @default(0)
-  metadata    String?  // JSON string for complex question data (drag-drop items, matching pairs, etc.)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  quizId    String
+  question  String
+  type      String   @default("MULTIPLE_CHOICE") // MULTIPLE_CHOICE, TRUE_FALSE, DRAG_DROP, MATCHING, FILL_BLANK
+  order     Int      @default(0)
+  metadata  String? // JSON string for complex question data (drag-drop items, matching pairs, etc.)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  quiz        Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  options     QuizOption[]
-  correctAnswer String?      // For TRUE_FALSE: "true" or "false", for others: JSON string
+  quiz          Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options       QuizOption[]
+  correctAnswer String? // For TRUE_FALSE: "true" or "false", for others: JSON string
 
-  @@map("quiz_questions")
   @@index([quizId])
+  @@map("quiz_questions")
 }
 
 model QuizOption {
-  id          String   @id @default(uuid())
-  questionId  String
-  text        String
-  isCorrect   Boolean  @default(false)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
 
   // Relations
-  question    QuizQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
-  @@map("quiz_options")
   @@index([questionId])
+  @@map("quiz_options")
 }
 
 model QuizResult {
   id          String   @id @default(uuid())
   quizId      String
   studentId   String
-  score       Int      // Percentage score
+  score       Int // Percentage score
   passed      Boolean  @default(false)
-  answers     String   // JSON string of student answers
+  answers     String // JSON string of student answers
   completedAt DateTime @default(now())
 
   // Relations
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  quiz    Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@map("quiz_results")
   @@index([quizId])
   @@index([studentId])
   @@index([completedAt])
+  @@map("quiz_results")
 }
 
 model Message {
-  id          String   @id @default(uuid())
-  senderId    String
-  receiverId  String
-  content     String
-  fileUrl     String?  // URL to attached file
-  fileName    String?  // Original filename
-  fileSize    Int?     // File size in bytes
-  read        Boolean  @default(false)
-  readAt      DateTime?
-  createdAt   DateTime @default(now())
+  id         String    @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String
+  fileUrl    String? // URL to attached file
+  fileName   String? // Original filename
+  fileSize   Int? // File size in bytes
+  read       Boolean   @default(false)
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
 
   // Relations
-  sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver    User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
-  @@map("messages")
   @@index([senderId])
   @@index([receiverId])
   @@index([createdAt])
   @@index([senderId, receiverId])
+  @@map("messages")
 }
 
 model ActivityLog {
-  id          String   @id @default(uuid())
-  userId      String
-  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, VIEW, etc.
-  entityType  String?  // COURSE, LESSON, USER, etc.
-  entityId    String?  // ID of the affected entity
-  details     String?  // JSON string with additional details
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  userId     String
+  action     String // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, VIEW, etc.
+  entityType String? // COURSE, LESSON, USER, etc.
+  entityId   String? // ID of the affected entity
+  details    String? // JSON string with additional details
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
   // Relations
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("activity_logs")
   @@index([userId])
   @@index([action])
   @@index([entityType])
   @@index([createdAt])
   @@index([userId, createdAt])
+  @@map("activity_logs")
 }
 
 model FlashcardDeck {
@@ -330,104 +334,104 @@ model FlashcardDeck {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  course      Course?          @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  lesson      Lesson?          @relation(fields: [lessonId], references: [id], onDelete: SetNull)
-  creator     User             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  flashcards  Flashcard[]
-  progress    FlashcardProgress[]
+  course     Course?             @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  lesson     Lesson?             @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  creator    User                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  flashcards Flashcard[]
+  progress   FlashcardProgress[]
 
-  @@map("flashcard_decks")
   @@index([courseId])
   @@index([lessonId])
   @@index([createdBy])
+  @@map("flashcard_decks")
 }
 
 model Flashcard {
-  id          String   @id @default(uuid())
-  deckId      String
-  front       String   // Front side of the card
-  back        String   // Back side of the card
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  deckId    String
+  front     String // Front side of the card
+  back      String // Back side of the card
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  deck        FlashcardDeck    @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  progress    FlashcardProgress[]
+  deck     FlashcardDeck       @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  progress FlashcardProgress[]
 
-  @@map("flashcards")
   @@index([deckId])
+  @@map("flashcards")
 }
 
 model FlashcardProgress {
-  id          String   @id @default(uuid())
-  userId      String
-  deckId      String
-  cardId      String
-  difficulty  String   @default("NEW") // NEW, EASY, MEDIUM, HARD
+  id           String    @id @default(uuid())
+  userId       String
+  deckId       String
+  cardId       String
+  difficulty   String    @default("NEW") // NEW, EASY, MEDIUM, HARD
   lastReviewed DateTime?
-  nextReview  DateTime?
-  reviewCount Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  nextReview   DateTime?
+  reviewCount  Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Relations
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deck        FlashcardDeck    @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  card        Flashcard        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  card Flashcard     @relation(fields: [cardId], references: [id], onDelete: Cascade)
 
   @@unique([userId, cardId])
-  @@map("flashcard_progress")
   @@index([userId])
   @@index([deckId])
   @@index([cardId])
   @@index([nextReview])
+  @@map("flashcard_progress")
 }
 
 model PracticeExercise {
-  id          String   @id @default(uuid())
-  lessonId    String
-  title       String
-  description String?
-  type        String   // CODING, WRITING, SPEAKING, LISTENING, etc.
+  id           String   @id @default(uuid())
+  lessonId     String
+  title        String
+  description  String?
+  type         String // CODING, WRITING, SPEAKING, LISTENING, etc.
   instructions String
-  solution    String?  // Expected solution or answer
-  autoCheck   Boolean  @default(false) // Can be automatically checked
-  maxAttempts Int      @default(3)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  solution     String? // Expected solution or answer
+  autoCheck    Boolean  @default(false) // Can be automatically checked
+  maxAttempts  Int      @default(3)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  lesson      Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  results     PracticeResult[]
+  lesson  Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  results PracticeResult[]
 
-  @@map("practice_exercises")
   @@index([lessonId])
+  @@map("practice_exercises")
 }
 
 model PracticeResult {
-  id          String   @id @default(uuid())
-  exerciseId  String
-  studentId   String
-  answer      String   // Student's answer
-  score       Int?     // Score if auto-checked
-  feedback    String?  // Automated or manual feedback
-  status      String   @default("SUBMITTED") // SUBMITTED, REVIEWED, APPROVED, REJECTED
-  reviewedBy  String?  // Teacher/Moderator who reviewed
-  reviewedAt  DateTime?
-  attemptNumber Int    @default(1)
-  submittedAt DateTime @default(now())
+  id            String    @id @default(uuid())
+  exerciseId    String
+  studentId     String
+  answer        String // Student's answer
+  score         Int? // Score if auto-checked
+  feedback      String? // Automated or manual feedback
+  status        String    @default("SUBMITTED") // SUBMITTED, REVIEWED, APPROVED, REJECTED
+  reviewedBy    String? // Teacher/Moderator who reviewed
+  reviewedAt    DateTime?
+  attemptNumber Int       @default(1)
+  submittedAt   DateTime  @default(now())
 
   // Relations
-  exercise    PracticeExercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  student     User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exercise PracticeExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  student  User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@map("practice_results")
   @@index([exerciseId])
   @@index([studentId])
   @@index([status])
   @@index([submittedAt])
+  @@map("practice_results")
 }
 
 model ExternalIntegration {
@@ -435,21 +439,78 @@ model ExternalIntegration {
   userId      String?
   courseId    String?
   lessonId    String?
-  type        String   // GOOGLE_DOCS, QUIZLET, YOUTUBE, etc.
-  externalId  String   // ID in external service
-  externalUrl String   // URL to external resource
-  metadata    String?  // JSON string with additional data
+  type        String // GOOGLE_DOCS, QUIZLET, YOUTUBE, etc.
+  externalId  String // ID in external service
+  externalUrl String // URL to external resource
+  metadata    String? // JSON string with additional data
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  lesson      Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
-  @@map("external_integrations")
   @@index([userId])
   @@index([courseId])
   @@index([lessonId])
   @@index([type])
+  @@map("external_integrations")
 }
 
+// Group Classes Models
+model Class {
+  id          String  @id @default(uuid())
+  name        String // "Английский для начинающих - Группа A"
+  description String? // Описание класса
+  teacherId   String
+  teacher     User    @relation("TeacherClasses", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Настройки
+  maxStudents Int         @default(10)
+  level       String? // "Beginner", "Intermediate", "Advanced"
+  language    String? // "English", "Russian", etc.
+  status      ClassStatus @default(ACTIVE) // ACTIVE, COMPLETED, CANCELLED, ARCHIVED
+
+  // Связи
+  students ClassStudent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@index([status])
+  @@map("classes")
+}
+
+enum ClassStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+// Студенты в классе
+model ClassStudent {
+  id        String @id @default(uuid())
+  classId   String
+  class     Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User   @relation("StudentClasses", fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Статус
+  status     EnrollmentStatus @default(PENDING) // PENDING, APPROVED, REJECTED
+  enrolledAt DateTime         @default(now())
+  approvedAt DateTime?
+
+  @@unique([classId, studentId])
+  @@index([classId])
+  @@index([studentId])
+  @@index([status])
+  @@map("class_students")
+}
+
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

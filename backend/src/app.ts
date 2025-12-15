@@ -18,6 +18,7 @@ import flashcardRoutes from './routes/flashcardRoutes';
 import practiceRoutes from './routes/practiceRoutes';
 import integrationRoutes from './routes/integrationRoutes';
 import activityLogRoutes from './routes/activityLogRoutes';
+import classRoutes from './routes/classRoutes';
 import { errorHandler } from './utils/errors';
 import { ensureUploadDir } from './services/fileService';
 import { apiLimiter } from './middleware/rateLimit';
@@ -85,6 +86,7 @@ app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/practice', practiceRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
+app.use('/api/classes', classRoutes);
 
 // Log registered routes for debugging
 console.log('✅ Routes registered:');
@@ -104,6 +106,7 @@ console.log('  - /api/flashcards');
 console.log('  - /api/practice');
 console.log('  - /api/integrations');
 console.log('  - /api/activity-logs');
+console.log('  - /api/classes');
 
 // Health check
 app.get('/api/health', (req, res) => {

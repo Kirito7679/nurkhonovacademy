@@ -21,6 +21,7 @@ import FlashcardStudy from './pages/FlashcardStudy';
 import FlashcardDeckEdit from './pages/FlashcardDeckEdit';
 import PracticeExercises from './pages/PracticeExercises';
 import Integrations from './pages/Integrations';
+import Classes from './pages/Classes';
 import Layout from './components/Layout';
 import { Role } from './types';
 
@@ -234,6 +235,16 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
                 <TeacherChats />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/teacher/classes"
+            element={
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+                <Layout>
+                  <Classes />
+                </Layout>
               </PrivateRoute>
             }
           />

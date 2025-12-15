@@ -128,3 +128,4 @@ brew install supabase/tap/supabase
 ## ✅ Готово!
 
 Теперь вы можете управлять Supabase через командную строку!
+

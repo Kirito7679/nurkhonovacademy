@@ -109,3 +109,4 @@ npm install @supabase/supabase-js
 ---
 
 **Примечание**: Supabase Storage использует другой подход, чем Cloudinary. Нужно будет обновить код для работы с Supabase API.
+

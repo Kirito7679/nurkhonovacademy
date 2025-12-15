@@ -176,3 +176,4 @@ export const extractFilePath = (url: string): { bucket: string; path: string } |
 };
 
 export default initSupabase;
+

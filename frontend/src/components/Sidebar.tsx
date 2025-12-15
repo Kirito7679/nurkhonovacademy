@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Users, BookOpen, User, BarChart3, Instagram, Youtube, Send, MessageSquare, SquareStack, FileText, Link as LinkIcon } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, User, BarChart3, Instagram, Youtube, Send, MessageSquare, SquareStack, FileText, Link as LinkIcon, GraduationCap } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 export default function Sidebar() {
@@ -13,6 +13,7 @@ export default function Sidebar() {
     { path: '/teacher/statistics', icon: BarChart3, label: t('dashboard.statistics') },
     { path: '/teacher/students', icon: Users, label: t('students.title') },
     { path: '/teacher/courses', icon: BookOpen, label: t('courses.title') },
+    { path: '/teacher/classes', icon: GraduationCap, label: 'Групповые классы' },
     { path: '/teacher/chats', icon: MessageSquare, label: t('chat.withStudent') },
     { path: '/teacher/profile', icon: User, label: t('profile.title') },
   ];

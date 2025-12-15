@@ -110,3 +110,4 @@ ls -la uploads/
 ---
 
 **Текущий путь**: `backend/uploads/` (относительно корня backend проекта)
+

@@ -69,3 +69,5 @@ Railway автоматически обновит backend.
 
 Подробная инструкция: `DEPLOY_UPDATE_PHASE2.md`
 
+
+

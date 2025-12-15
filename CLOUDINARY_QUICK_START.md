@@ -62,3 +62,4 @@ CLOUDINARY_API_SECRET = ваш_api_secret
 ---
 
 **Время настройки: ~5 минут** ⏱️
+
