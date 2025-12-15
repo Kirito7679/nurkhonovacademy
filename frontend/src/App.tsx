@@ -24,6 +24,7 @@ import Integrations from './pages/Integrations';
 import Classes from './pages/Classes';
 import ClassDetails from './pages/ClassDetails';
 import ClassChat from './pages/ClassChat';
+import Curators from './pages/Curators';
 import Layout from './components/Layout';
 import { Role } from './types';
 
@@ -269,6 +270,14 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.STUDENT]}>
                 <ClassChat />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/curators"
+            element={
+              <PrivateRoute allowedRoles={[Role.ADMIN]}>
+                <Curators />
               </PrivateRoute>
             }
           />

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Users, BookOpen, User, BarChart3, Instagram, Youtube, Send, MessageSquare, SquareStack, FileText, Link as LinkIcon, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, User, BarChart3, Instagram, Youtube, Send, MessageSquare, SquareStack, FileText, Link as LinkIcon, GraduationCap, UserCog } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 export default function Sidebar() {
@@ -15,6 +15,7 @@ export default function Sidebar() {
     { path: '/teacher/courses', icon: BookOpen, label: t('courses.title') },
     { path: '/teacher/classes', icon: GraduationCap, label: 'Групповые классы' },
     { path: '/teacher/chats', icon: MessageSquare, label: t('chat.withStudent') },
+    { path: '/admin/curators', icon: UserCog, label: 'Кураторы', roles: ['ADMIN'] },
     { path: '/teacher/profile', icon: User, label: t('profile.title') },
   ];
 
@@ -47,6 +48,11 @@ export default function Sidebar() {
             const Icon = item.icon;
             const isActive = location.pathname === item.path || 
               (item.path !== '/teacher/dashboard' && location.pathname.startsWith(item.path));
+            
+            // Проверка прав доступа для пункта меню
+            if (item.roles && !item.roles.includes(user?.role || '')) {
+              return null;
+            }
             
             return (
               <li key={item.path}>
