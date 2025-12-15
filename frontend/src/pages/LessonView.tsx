@@ -4,16 +4,25 @@ import { useTranslation } from 'react-i18next';
 import ReactPlayer from 'react-player';
 import api from '../services/api';
 import { Lesson, ApiResponse, PracticeExercise, FlashcardDeck, ExternalIntegration } from '../types';
-import { ArrowLeft, Download, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, ChevronLeft, ChevronRight, Trash2, BookOpen } from 'lucide-react';
 import { getVideoEmbedUrl, detectVideoSource } from '../utils/validation';
 import CommentsSection from '../components/CommentsSection';
 import LessonQuiz from '../components/Quiz';
+import { useAuthStore } from '../store/authStore';
+import { Role } from '../types';
+import ConfirmModal from '../components/ConfirmModal';
+import { useState } from 'react';
 
 export default function LessonView() {
   const { t } = useTranslation();
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; fileId: string | null }>({
+    isOpen: false,
+    fileId: null,
+  });
 
   const { data: lessonResponse, isLoading } = useQuery(
     ['lesson', lessonId],
@@ -92,11 +101,103 @@ export default function LessonView() {
     }
   );
 
-  const handleDownload = async (fileUrl: string, fileName: string) => {
+  const deleteFileMutation = useMutation(
+    async (fileId: string) => {
+      await api.delete(`/files/${fileId}`);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['lesson', lessonId]);
+        setDeleteConfirm({ isOpen: false, fileId: null });
+      },
+    }
+  );
+
+  const canDeleteFile = (lesson: Lesson) => {
+    if (!user) return false;
+    return user.role === Role.TEACHER || user.role === Role.ADMIN;
+  };
+
+  const handleDownload = async (e: React.MouseEvent<HTMLButtonElement>, fileUrl: string, fileName: string) => {
+    // Prevent default behavior and stop propagation immediately
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
+    
     try {
-      // If file is from Supabase or Cloudinary (direct URL), open it directly
-      if (fileUrl.includes('supabase.co') || fileUrl.includes('cloudinary.com') || fileUrl.startsWith('http')) {
-        window.open(fileUrl, '_blank');
+      // Decode fileName if it's encoded incorrectly (fix Cyrillic mojibake)
+      let decodedFileName = fileName;
+      try {
+        // Check for mojibake characters (Đ, Ñ, €, Ð, £)
+        if (/[ĐÑ€Ð£]/.test(fileName)) {
+          // Try to fix double-encoded UTF-8
+          // Convert from latin1 interpretation to utf8
+          try {
+            const bytes = new Uint8Array(fileName.length);
+            for (let i = 0; i < fileName.length; i++) {
+              bytes[i] = fileName.charCodeAt(i) & 0xFF;
+            }
+            decodedFileName = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+            
+            // If still has mojibake, try escape/decode
+            if (/[ĐÑ€Ð£]/.test(decodedFileName)) {
+              decodedFileName = decodeURIComponent(escape(fileName));
+            }
+          } catch {
+            decodedFileName = decodeURIComponent(escape(fileName));
+          }
+        } else if (fileName.includes('%')) {
+          // Try URL decoding
+          try {
+            decodedFileName = decodeURIComponent(fileName);
+          } catch {
+            decodedFileName = fileName;
+          }
+        }
+      } catch {
+        decodedFileName = fileName;
+      }
+      
+      // If file is from Supabase or Cloudinary (direct URL), download it
+      if (fileUrl.includes('supabase.co') || fileUrl.includes('cloudinary.com') || (fileUrl.startsWith('http') && !fileUrl.includes('/api/files/'))) {
+        // For cloud storage, fetch the file first to ensure proper download without page reload
+        try {
+          const response = await fetch(fileUrl, { mode: 'cors' });
+          if (!response.ok) throw new Error('Failed to fetch file');
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = decodedFileName;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          // Clean up after a short delay
+          setTimeout(() => {
+            if (document.body.contains(link)) {
+              document.body.removeChild(link);
+            }
+            window.URL.revokeObjectURL(url);
+          }, 100);
+        } catch (fetchError) {
+          console.error('Error fetching cloud file:', fetchError);
+          // Fallback: direct link (but this might open in new tab)
+          const link = document.createElement('a');
+          link.href = fileUrl;
+          link.download = decodedFileName;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => {
+            if (document.body.contains(link)) {
+              document.body.removeChild(link);
+            }
+          }, 100);
+        }
       } else {
         // If file is from local storage, use download endpoint
         const fileId = fileUrl.replace('/api/files/download/', '');
@@ -109,17 +210,41 @@ export default function LessonView() {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = fileName;
+        link.download = decodedFileName;
+        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        // Clean up after a short delay
+        setTimeout(() => {
+          if (document.body.contains(link)) {
+            document.body.removeChild(link);
+          }
+          window.URL.revokeObjectURL(url);
+        }, 100);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error downloading file:', error);
-      // Fallback: try to open URL directly
-      window.open(fileUrl, '_blank');
+      // Fallback: try to open URL directly in new tab (but prevent page reload)
+      try {
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) {
+            document.body.removeChild(link);
+          }
+        }, 100);
+      } catch (fallbackError) {
+        console.error('Fallback download also failed:', fallbackError);
+      }
     }
+    
+    // Return false to prevent any default behavior
+    return false;
   };
 
   const handleVideoProgress = (progress: { playedSeconds: number }) => {
@@ -257,7 +382,37 @@ export default function LessonView() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-neutral-900 truncate">{file.fileName}</p>
+                      <p className="font-medium text-neutral-900 truncate" title={file.fileName}>
+                        {(() => {
+                          // Try to decode fileName if it's incorrectly encoded (fix Cyrillic mojibake)
+                          try {
+                            const fileName = file.fileName;
+                            // Check for mojibake characters
+                            if (/[ĐÑ€Ð£]/.test(fileName)) {
+                              // Try to fix double-encoded UTF-8
+                              try {
+                                // Convert from latin1 interpretation to utf8
+                                const bytes = new Uint8Array(fileName.length);
+                                for (let i = 0; i < fileName.length; i++) {
+                                  bytes[i] = fileName.charCodeAt(i) & 0xFF;
+                                }
+                                const decoded = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+                                // If still has mojibake, try another approach
+                                if (/[ĐÑ€Ð£]/.test(decoded)) {
+                                  // Try simple escape/decode
+                                  return decodeURIComponent(escape(fileName));
+                                }
+                                return decoded;
+                              } catch {
+                                return decodeURIComponent(escape(fileName));
+                              }
+                            }
+                            return fileName;
+                          } catch {
+                            return file.fileName;
+                          }
+                        })()}
+                      </p>
                       <p className="text-sm text-neutral-500">
                         {t('lessons.fileSize', { defaultValue: 'Размер' })}: {(file.fileSize / 1024 / 1024).toFixed(2)} MB
                         {isVideo && <span className="ml-2 text-purple-600">• Видео</span>}
@@ -266,13 +421,35 @@ export default function LessonView() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDownload(file.fileUrl, file.fileName)}
-                    className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    {isVideo ? 'Смотреть' : 'Скачать'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDownload(e, file.fileUrl, file.fileName);
+                      }}
+                      className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      {isVideo ? 'Смотреть' : 'Скачать'}
+                    </button>
+                    {canDeleteFile(lesson) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDeleteConfirm({ isOpen: true, fileId: file.id });
+                        }}
+                        className="px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors flex items-center gap-2"
+                        title="Удалить файл"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="hidden sm:inline">Удалить</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -410,6 +587,22 @@ export default function LessonView() {
           <div className="flex-1"></div>
         )}
       </div>
+
+      {/* Delete File Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, fileId: null })}
+        onConfirm={() => {
+          if (deleteConfirm.fileId) {
+            deleteFileMutation.mutate(deleteConfirm.fileId);
+          }
+        }}
+        title="Удалить файл"
+        message="Вы уверены, что хотите удалить этот файл? Это действие нельзя отменить."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        variant="danger"
+      />
     </div>
   );
 }
