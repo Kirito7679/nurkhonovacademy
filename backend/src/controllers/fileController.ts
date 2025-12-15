@@ -125,26 +125,53 @@ export const uploadFile = async (
       fileUrl = `/api/files/download/${req.file.filename}`;
     }
 
-    // Decode fileName if it's incorrectly encoded
+    // Decode fileName if it's incorrectly encoded (fix Cyrillic encoding issues)
     let decodedFileName = req.file.originalname;
     try {
-      // Try to decode if it looks like it's encoded (contains encoded characters)
-      if (req.file.originalname.includes('%') || /[^\x00-\x7F]/.test(req.file.originalname)) {
-        // Try different decoding methods
+      // Check if filename contains mojibake (garbled characters like Đ, Ñ, €, Ð)
+      // These appear when UTF-8 is interpreted as Latin-1
+      const hasMojibake = /[ĐÑ€Ð£]/.test(req.file.originalname);
+      
+      if (hasMojibake) {
+        // Try to fix double-encoded UTF-8 (common issue with Cyrillic)
+        // The file name might be encoded as latin1 but should be utf8
+        try {
+          // Convert from latin1 (incorrect interpretation) to utf8 (correct)
+          decodedFileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+          
+          // If result still has mojibake, the original was already corrupted
+          // Try to reverse the corruption by treating as Windows-1251
+          if (/[ĐÑ€Ð£]/.test(decodedFileName)) {
+            // Try Windows-1251 encoding (common for Cyrillic)
+            try {
+              // Create a mapping for common Cyrillic mojibake
+              // Đ£ = У, Ñ€ = р, Ð³ = г, Ð° = а, Ð = В, Ð² = в, µ = е, ´ = д, ½ = н, ¸ = и, µ = е
+              // This is a workaround - ideally we'd use iconv-lite but let's try without it first
+              decodedFileName = Buffer.from(req.file.originalname, 'binary').toString('utf8');
+            } catch {
+              decodedFileName = req.file.originalname;
+            }
+          }
+        } catch (err) {
+          console.error('Error decoding filename:', err);
+          decodedFileName = req.file.originalname;
+        }
+      } else if (req.file.originalname.includes('%')) {
+        // Try URL decoding if contains % characters
         try {
           decodedFileName = decodeURIComponent(req.file.originalname);
         } catch {
-          // If that fails, try Buffer decoding
-          try {
-            decodedFileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
-          } catch {
-            // If all fails, use original
-            decodedFileName = req.file.originalname;
-          }
+          decodedFileName = req.file.originalname;
         }
       }
-    } catch {
+    } catch (err) {
+      console.error('Error in filename decoding:', err);
       decodedFileName = req.file.originalname;
+    }
+    
+    // Log for debugging
+    if (decodedFileName !== req.file.originalname) {
+      console.log(`Filename decoded: "${req.file.originalname}" -> "${decodedFileName}"`);
     }
 
     // Create file record
@@ -266,7 +293,23 @@ export const downloadFile = async (
         throw new AppError('Файл не найден. Возможно, он был перемещен в облачное хранилище.', 404);
       }
       
-      res.download(filePath, lessonFile.fileName, (err) => {
+      // Decode fileName for download (fix encoding issues)
+      let downloadFileName = lessonFile.fileName;
+      try {
+        // Check if filename contains mojibake
+        if (/[ĐÑ€Ð£]/.test(lessonFile.fileName)) {
+          // Try to fix encoding
+          downloadFileName = Buffer.from(lessonFile.fileName, 'latin1').toString('utf8');
+        }
+      } catch {
+        downloadFileName = lessonFile.fileName;
+      }
+      
+      // Set proper headers for file download
+      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(downloadFileName)}`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      
+      res.download(filePath, downloadFileName, (err) => {
         if (err) {
           console.error('Error downloading file:', err);
           if (!res.headersSent) {
