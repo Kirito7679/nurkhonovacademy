@@ -9,6 +9,7 @@ import { ApiResponse, User, ApiError } from '../types';
 import { Search, User as UserIcon, ArrowRight, Eye, Plus, X, Download } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
+import { useAuthStore } from '../store/authStore';
 
 const createStudentSchema = z.object({
   firstName: z.string().min(1, 'Имя обязательно'),
@@ -21,10 +22,13 @@ const createStudentSchema = z.object({
 type CreateStudentFormData = z.infer<typeof createStudentSchema>;
 
 export default function Students() {
+  const { user } = useAuthStore();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const queryClient = useQueryClient();
+  
+  const isAdmin = user?.role === 'ADMIN';
 
   const { data: studentsResponse, isLoading } = useQuery(
     ['students', debouncedSearch],
@@ -88,13 +92,15 @@ export default function Students() {
             <Download className="h-5 w-5 mr-2" />
             <span>Экспорт</span>
           </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="btn-primary inline-flex items-center"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            <span>Создать студента</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="btn-primary inline-flex items-center"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              <span>Создать студента</span>
+            </button>
+          )}
         </div>
       </div>
 
