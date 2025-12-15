@@ -72,6 +72,7 @@ export const getTeacherChats = async (
 
         return {
           ...student,
+          chatType: 'PRIVATE' as const,
           lastMessage: lastMessage ? {
             content: lastMessage.content,
             createdAt: lastMessage.createdAt,
@@ -82,9 +83,86 @@ export const getTeacherChats = async (
       })
     );
 
-    // Sort: students with messages first (by last message date), then others alphabetically
-    const sortedStudents = students.sort((a, b) => {
-      // Students with messages first
+    // Get teacher's classes with their last message
+    const classWhere: any = {
+      teacherId,
+    };
+
+    if (search && typeof search === 'string') {
+      classWhere.OR = [
+        { name: { contains: search } },
+        { description: { contains: search } },
+      ];
+    }
+
+    const classes = await prisma.class.findMany({
+      where: classWhere,
+      include: {
+        students: {
+          where: {
+            status: 'APPROVED',
+          },
+          select: {
+            studentId: true,
+          },
+        },
+        _count: {
+          select: {
+            students: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+
+    // Get classes with their last message
+    const classesWithMessages = await Promise.all(
+      classes.map(async (classData) => {
+        const lastMessage = await prisma.classMessage.findFirst({
+          where: {
+            classId: classData.id,
+          },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            sender: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        });
+
+        return {
+          id: classData.id,
+          firstName: classData.name,
+          lastName: '',
+          phone: '',
+          avatarUrl: null,
+          chatType: 'GROUP' as const,
+          classId: classData.id,
+          className: classData.name,
+          studentCount: classData._count.students,
+          lastMessage: lastMessage ? {
+            content: lastMessage.content,
+            createdAt: lastMessage.createdAt,
+            senderId: lastMessage.senderId,
+            senderName: `${lastMessage.sender.firstName} ${lastMessage.sender.lastName}`,
+          } : null,
+          unreadCount: 0, // Group chats don't have unread count for now
+        };
+      })
+    );
+
+    // Combine students and classes
+    const allChats = [...students, ...classesWithMessages];
+
+    // Sort: chats with messages first (by last message date), then others alphabetically
+    const sortedChats = allChats.sort((a, b) => {
+      // Chats with messages first
       if (a.lastMessage && !b.lastMessage) return -1;
       if (!a.lastMessage && b.lastMessage) return 1;
       
@@ -94,14 +172,14 @@ export const getTeacherChats = async (
       }
       
       // If neither has messages, sort alphabetically
-      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
-      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
-      return nameA.localeCompare(nameB);
+      const nameA = a.chatType === 'GROUP' ? a.className : `${a.firstName} ${a.lastName}`;
+      const nameB = b.chatType === 'GROUP' ? b.className : `${b.firstName} ${b.lastName}`;
+      return nameA.toLowerCase().localeCompare(nameB.toLowerCase());
     });
 
     res.json({
       success: true,
-      data: sortedStudents,
+      data: sortedChats,
     });
   } catch (error) {
     next(error);

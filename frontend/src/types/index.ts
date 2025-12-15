@@ -258,10 +258,15 @@ export interface ChatUser {
   lastName: string;
   phone?: string;
   avatarUrl?: string | null;
+  chatType?: 'PRIVATE' | 'GROUP';
+  classId?: string;
+  className?: string;
+  studentCount?: number;
   lastMessage?: {
     content: string;
     createdAt: string;
     senderId: string;
+    senderName?: string;
   } | null;
   unreadCount?: number;
 }

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { ApiResponse, ChatUser, Message, ApiError } from '../types';
-import { Send, MessageSquare, Loader2, Search, Paperclip, X, Download, File, User, ArrowLeft } from 'lucide-react';
+import { Send, MessageSquare, Loader2, Search, Paperclip, X, Download, File, User, ArrowLeft, Users } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useEffect, useRef } from 'react';
 import { useDebounce } from '../hooks/useDebounce';
@@ -15,6 +15,8 @@ export default function TeacherChats() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedChatType, setSelectedChatType] = useState<'PRIVATE' | 'GROUP' | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFile, setSelectedFile] = useState<{ file: File; url: string } | null>(null);
@@ -195,23 +197,55 @@ export default function TeacherChats() {
     return <File className="h-4 w-4" />;
   };
 
-  // Select first student if available (only if no student is selected)
+  // Select first chat if available (only if no chat is selected)
   useEffect(() => {
-    if (chats.length > 0 && !selectedStudentId) {
-      setSelectedStudentId(chats[0].id);
+    if (chats.length > 0 && !selectedStudentId && !selectedClassId) {
+      const firstChat = chats[0];
+      if (firstChat.chatType === 'GROUP' && firstChat.classId) {
+        setSelectedChatType('GROUP');
+        setSelectedClassId(firstChat.classId);
+      } else {
+        setSelectedChatType('PRIVATE');
+        setSelectedStudentId(firstChat.id);
+      }
     }
-    // If selected student is not in filtered list, clear selection
-    if (selectedStudentId && chats.length > 0 && !chats.find(c => c.id === selectedStudentId)) {
-      setSelectedStudentId(chats[0].id || null);
+    // If selected chat is not in filtered list, clear selection
+    if ((selectedStudentId || selectedClassId) && chats.length > 0) {
+      const found = chats.find(c => 
+        (c.chatType === 'PRIVATE' && c.id === selectedStudentId) ||
+        (c.chatType === 'GROUP' && c.classId === selectedClassId)
+      );
+      if (!found) {
+        const firstChat = chats[0];
+        if (firstChat.chatType === 'GROUP' && firstChat.classId) {
+          setSelectedChatType('GROUP');
+          setSelectedClassId(firstChat.classId);
+          setSelectedStudentId(null);
+        } else {
+          setSelectedChatType('PRIVATE');
+          setSelectedStudentId(firstChat.id);
+          setSelectedClassId(null);
+        }
+      }
     }
-  }, [chats, selectedStudentId]);
+  }, [chats, selectedStudentId, selectedClassId]);
 
-  // Handle student selection - show chat view on mobile
-  const handleStudentSelect = (studentId: string) => {
-    setSelectedStudentId(studentId);
-    // На мобильных устройствах показываем чат вместо списка
-    if (window.innerWidth < 768) {
-      setShowChatView(true);
+  // Handle chat selection - show chat view on mobile
+  const handleChatSelect = (chat: ChatUser) => {
+    if (chat.chatType === 'GROUP' && chat.classId) {
+      setSelectedChatType('GROUP');
+      setSelectedClassId(chat.classId);
+      setSelectedStudentId(null);
+      // Navigate to group chat
+      navigate(`/classes/${chat.classId}/chat`);
+    } else {
+      setSelectedChatType('PRIVATE');
+      setSelectedStudentId(chat.id);
+      setSelectedClassId(null);
+      // На мобильных устройствах показываем чат вместо списка
+      if (window.innerWidth < 768) {
+        setShowChatView(true);
+      }
     }
   };
 
@@ -232,7 +266,10 @@ export default function TeacherChats() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const selectedChat = chats.find((chat) => chat.id === selectedStudentId);
+  const selectedChat = chats.find((chat) => 
+    (chat.chatType === 'PRIVATE' && chat.id === selectedStudentId) ||
+    (chat.chatType === 'GROUP' && chat.classId === selectedClassId)
+  );
   const messages = chatResponse?.messages || [];
 
   return (
@@ -242,7 +279,7 @@ export default function TeacherChats() {
         showChatView ? 'hidden md:flex' : 'flex'
       }`}>
         <div className="p-4 border-b border-neutral-200">
-          <h2 className="text-lg font-semibold text-neutral-900 mb-3">Студенты</h2>
+          <h2 className="text-lg font-semibold text-neutral-900 mb-3">Чаты</h2>
           {/* Search Input */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none z-10" />
@@ -263,81 +300,113 @@ export default function TeacherChats() {
           ) : chats.length === 0 ? (
             <div className="text-center py-8 text-neutral-500">
               <MessageSquare className="h-12 w-12 mx-auto mb-4 text-neutral-400" />
-              <p>{debouncedSearch ? 'Студенты не найдены' : 'Нет студентов'}</p>
+              <p>{debouncedSearch ? 'Чаты не найдены' : 'Нет чатов'}</p>
             </div>
           ) : (
             <div className="divide-y divide-neutral-100">
-              {chats.map((chat, index) => (
-                <div
-                  key={chat.id}
-                  className={`w-full p-4 hover:bg-gradient-to-r hover:from-primary-50 hover:to-blue-50/50 transition-all duration-200 cursor-pointer group ${
-                    selectedStudentId === chat.id 
-                      ? 'bg-gradient-to-r from-primary-100 to-blue-100/50 border-l-4 border-primary-500 shadow-sm' 
-                      : ''
-                  } animate-slide-in`}
-                  style={{ animationDelay: `${index * 0.03}s` }}
-                >
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleStudentSelect(chat.id)}
-                      className="flex items-center gap-3 flex-1 text-left"
-                    >
-                      {chat.avatarUrl ? (
-                        <img
-                          src={chat.avatarUrl}
-                          alt={`${chat.firstName} ${chat.lastName}`}
-                          className="w-12 h-12 rounded-full object-cover ring-2 ring-primary-200 shadow-sm group-hover:ring-primary-400 transition-all"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-md ring-2 ring-primary-200 group-hover:ring-primary-400 transition-all">
-                          {chat.firstName[0]}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-semibold text-neutral-900 truncate group-hover:text-primary-700 transition-colors">
-                            {chat.firstName} {chat.lastName}
-                          </h3>
-                          {chat.unreadCount && chat.unreadCount > 0 && (
-                            <span className="bg-gradient-to-br from-primary-500 to-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 shadow-md animate-pulse">
-                              {chat.unreadCount}
-                            </span>
+              {chats.map((chat, index) => {
+                const isSelected = 
+                  (chat.chatType === 'PRIVATE' && selectedStudentId === chat.id) ||
+                  (chat.chatType === 'GROUP' && selectedClassId === chat.classId);
+                
+                return (
+                  <div
+                    key={chat.chatType === 'GROUP' ? `group-${chat.classId}` : chat.id}
+                    className={`w-full p-4 hover:bg-gradient-to-r hover:from-primary-50 hover:to-blue-50/50 transition-all duration-200 cursor-pointer group ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-primary-100 to-blue-100/50 border-l-4 border-primary-500 shadow-sm' 
+                        : ''
+                    } animate-slide-in`}
+                    style={{ animationDelay: `${index * 0.03}s` }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleChatSelect(chat)}
+                        className="flex items-center gap-3 flex-1 text-left"
+                      >
+                        {chat.chatType === 'GROUP' ? (
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-md ring-2 ring-primary-200 group-hover:ring-primary-400 transition-all">
+                            <Users className="h-6 w-6" />
+                          </div>
+                        ) : chat.avatarUrl ? (
+                          <img
+                            src={chat.avatarUrl}
+                            alt={`${chat.firstName} ${chat.lastName}`}
+                            className="w-12 h-12 rounded-full object-cover ring-2 ring-primary-200 shadow-sm group-hover:ring-primary-400 transition-all"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-md ring-2 ring-primary-200 group-hover:ring-primary-400 transition-all">
+                            {chat.firstName[0]}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-semibold text-neutral-900 truncate group-hover:text-primary-700 transition-colors">
+                              {chat.chatType === 'GROUP' ? chat.className : `${chat.firstName} ${chat.lastName}`}
+                            </h3>
+                            {chat.unreadCount && chat.unreadCount > 0 && (
+                              <span className="bg-gradient-to-br from-primary-500 to-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 shadow-md animate-pulse">
+                                {chat.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          {chat.chatType === 'GROUP' && chat.studentCount !== undefined && (
+                            <p className="text-xs text-primary-600 mb-1 font-medium">
+                              {chat.studentCount} {chat.studentCount === 1 ? 'студент' : 'студентов'}
+                            </p>
+                          )}
+                          {chat.lastMessage ? (
+                            <>
+                              <p className="text-sm text-neutral-600 truncate group-hover:text-neutral-800 transition-colors">
+                                {chat.chatType === 'GROUP' && chat.lastMessage.senderName ? (
+                                  <span className="font-medium">{chat.lastMessage.senderName}: </span>
+                                ) : null}
+                                {chat.lastMessage.content}
+                              </p>
+                              <p className="text-xs text-neutral-500 mt-1 font-medium">
+                                {new Date(chat.lastMessage.createdAt).toLocaleDateString('ru-RU', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-sm text-neutral-500 group-hover:text-neutral-700 transition-colors">
+                              {chat.chatType === 'GROUP' ? 'Групповой чат' : `Телефон: ${chat.phone}`}
+                            </p>
                           )}
                         </div>
-                        {chat.lastMessage ? (
-                          <>
-                            <p className="text-sm text-neutral-600 truncate group-hover:text-neutral-800 transition-colors">
-                              {chat.lastMessage.content}
-                            </p>
-                            <p className="text-xs text-neutral-500 mt-1 font-medium">
-                              {new Date(chat.lastMessage.createdAt).toLocaleDateString('ru-RU', {
-                                day: 'numeric',
-                                month: 'short',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-sm text-neutral-500 group-hover:text-neutral-700 transition-colors">
-                            Телефон: {chat.phone}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/teacher/students/${chat.id}`);
-                      }}
-                      className="p-2.5 text-neutral-600 hover:text-primary-600 hover:bg-primary-100 rounded-xl transition-all duration-200 flex-shrink-0 active:scale-95"
-                      title="Открыть профиль студента"
-                    >
-                      <User className="h-5 w-5" />
-                    </button>
+                      </button>
+                      {chat.chatType === 'PRIVATE' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/teacher/students/${chat.id}`);
+                          }}
+                          className="p-2.5 text-neutral-600 hover:text-primary-600 hover:bg-primary-100 rounded-xl transition-all duration-200 flex-shrink-0 active:scale-95"
+                          title="Открыть профиль студента"
+                        >
+                          <User className="h-5 w-5" />
+                        </button>
+                      )}
+                      {chat.chatType === 'GROUP' && chat.classId && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/classes/${chat.classId}`);
+                          }}
+                          className="p-2.5 text-neutral-600 hover:text-primary-600 hover:bg-primary-100 rounded-xl transition-all duration-200 flex-shrink-0 active:scale-95"
+                          title="Открыть класс"
+                        >
+                          <Users className="h-5 w-5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -347,7 +416,20 @@ export default function TeacherChats() {
       <div className={`flex-1 flex flex-col card p-0 overflow-hidden ${
         showChatView ? 'flex' : 'hidden md:flex'
       }`}>
-        {selectedStudentId && selectedChat ? (
+        {selectedChatType === 'GROUP' && selectedClassId ? (
+          <div className="flex-1 flex items-center justify-center text-neutral-500">
+            <div className="text-center">
+              <MessageSquare className="h-16 w-16 mx-auto mb-4 text-neutral-400" />
+              <p className="mb-4">Групповой чат класса</p>
+              <button
+                onClick={() => navigate(`/classes/${selectedClassId}/chat`)}
+                className="btn-primary"
+              >
+                Открыть групповой чат
+              </button>
+            </div>
+          </div>
+        ) : selectedStudentId && selectedChat ? (
           <>
             {/* Chat Header */}
             <div className="p-4 border-b-2 border-primary-100 bg-gradient-to-r from-white to-blue-50/30 flex items-center justify-between shadow-sm">
