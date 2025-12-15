@@ -8,7 +8,12 @@ export default function Sidebar() {
   const { user } = useAuthStore();
   const location = useLocation();
   
-  const menuItems = [
+  const menuItems: Array<{
+    path: string;
+    icon: any;
+    label: string;
+    roles?: string[];
+  }> = [
     { path: '/teacher/dashboard', icon: LayoutDashboard, label: t('dashboard.title') },
     { path: '/teacher/statistics', icon: BarChart3, label: t('dashboard.statistics') },
     { path: '/teacher/students', icon: Users, label: t('students.title') },
