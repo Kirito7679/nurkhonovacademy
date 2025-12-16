@@ -26,31 +26,13 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
-        // Убедимся что vendor-react загружается первым через правильный порядок
+        // РАДИКАЛЬНОЕ РЕШЕНИЕ: Все vendor библиотеки в один чанк
+        // Это гарантирует правильный порядок загрузки и отсутствие ошибок useState
         manualChunks: (id) => {
-          // Vendor chunks - упрощенное разделение для избежания проблем с порядком загрузки
           if (id.includes('node_modules')) {
-            // ВСЕ что связано с React должно быть в vendor-react
-            // Это гарантирует что React загружается первым и доступен для всех зависимостей
-            // Включаем все возможные React зависимости и их пакеты
-            if (id.includes('react') || 
-                id.includes('react-dom') || 
-                id.includes('react-router') || 
-                id.includes('react-query') || 
-                id.includes('react-hook-form') || 
-                id.includes('react-i18next') || 
-                id.includes('react-player') ||
-                id.includes('zustand') || 
-                id.includes('@hookform') || 
-                id.includes('@tanstack') ||
-                id.includes('lucide-react') || 
-                id.includes('recharts') ||
-                id.includes('@testing-library/react') || // Testing library использует React
-                id.includes('eslint-plugin-react')) { // ESLint плагины для React
-              return 'vendor-react';
-            }
-            // Остальные библиотеки
-            return 'vendor-other';
+            // ВСЕ vendor библиотеки в один чанк vendor-react
+            // Это предотвращает проблемы с порядком загрузки
+            return 'vendor-react';
           }
         },
       },
