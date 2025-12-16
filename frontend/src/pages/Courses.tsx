@@ -14,7 +14,7 @@ type ViewMode = 'grid' | 'list';
 type StatusFilter = 'all' | 'approved' | 'pending' | 'locked';
 type SortBy = 'createdAt' | 'title' | 'lessons';
 
-function Courses() {
+const Courses = memo(function Courses() {
   const { t } = useTranslation();
   
   // Load saved preferences from localStorage
@@ -350,4 +350,6 @@ function Courses() {
     </div>
     </div>
   );
-}
+});
+
+export default Courses;
