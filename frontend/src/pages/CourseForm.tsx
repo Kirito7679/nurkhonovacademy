@@ -354,45 +354,6 @@ export default function CourseForm() {
               </button>
             </div>
           </div>
-            <nav className="flex space-x-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab('info')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === 'info'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-neutral-500 hover:text-neutral-700'
-                }`}
-              >
-                <Save className="h-4 w-4 inline mr-2" />
-                {t('courses.basicInfo', { defaultValue: 'Основная информация' })}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('modules')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === 'modules'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-neutral-500 hover:text-neutral-700'
-                }`}
-              >
-                <BookOpen className="h-4 w-4 inline mr-2" />
-                {t('modules.title')} ({modules.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('lessons')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === 'lessons'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-neutral-500 hover:text-neutral-700'
-                }`}
-              >
-                <List className="h-4 w-4 inline mr-2" />
-                Все уроки ({lessons.length})
-              </button>
-            </nav>
-          </div>
 
           {/* Tab Content */}
           {activeTab === 'info' && (
