@@ -8,8 +8,6 @@ import { BookOpen, Lock, CheckCircle, ArrowRight, Eye, Grid3x3, List, Search, Fi
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
 
-const Courses = memo(function Courses() {
-
 type ViewMode = 'grid' | 'list';
 type StatusFilter = 'all' | 'approved' | 'pending' | 'locked';
 type SortBy = 'createdAt' | 'title' | 'lessons';
