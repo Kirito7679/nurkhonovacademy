@@ -254,10 +254,10 @@ export default function Profile() {
             />
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-base md:text-xl font-semibold text-neutral-900 dark:text-neutral-100 break-words">
+            <h2 className="text-base md:text-xl font-semibold text-neutral-900 break-words">
               {userResponse?.firstName} {userResponse?.lastName}
             </h2>
-            <p className="text-sm md:text-base text-neutral-600 dark:text-neutral-400 break-words">
+            <p className="text-sm md:text-base text-neutral-600 break-words">
               {userResponse?.phone}
             </p>
             {avatarUploadProgress && (
@@ -271,7 +271,7 @@ export default function Profile() {
             {!avatarUploadProgress && (
               <label
                 htmlFor="avatar-upload-input"
-                className={`mt-2 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`mt-2 flex items-center gap-2 text-sm text-neutral-600 hover:text-primary-600 transition-colors cursor-pointer ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Upload className="h-4 w-4" />
                 <span>{uploadingAvatar ? 'Загрузка...' : 'Загрузить фото'}</span>

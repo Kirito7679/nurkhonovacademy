@@ -37,7 +37,7 @@ export default function StudentSidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-r-2 border-primary-200/50 dark:border-neutral-800/50 flex flex-col hidden md:flex z-40 shadow-education">
+    <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white/95 backdrop-blur-sm border-r-2 border-primary-200/50 flex flex-col hidden md:flex z-40 shadow-education">
       <nav className="p-4 flex-1">
         <ul className="space-y-2">
           {menuItems.map((item) => {

@@ -1323,7 +1323,7 @@ export default function LessonForm() {
 
             {/* Files Section */}
             <div className="card p-6">
-              <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
+              <h2 className="text-xl font-semibold text-neutral-900 mb-4">
                 Файлы урока
               </h2>
 

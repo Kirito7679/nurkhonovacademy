@@ -71,53 +71,53 @@ export default function FlashcardAnalytics({ deckId }: FlashcardAnalyticsProps) 
     <div className="card p-6 space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <BarChart3 className="h-6 w-6 text-primary-600" />
-        <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
+        <h3 className="text-xl font-bold text-neutral-900">
           Аналитика: {analytics.deckTitle}
         </h3>
       </div>
 
       {/* Overview Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-primary-50 to-primary-50 dark:from-neutral-800 dark:to-neutral-800 p-4 rounded-xl border-2 border-primary-200 dark:border-neutral-700">
+        <div className="bg-gradient-to-br from-primary-50 to-primary-50 p-4 rounded-xl border-2 border-primary-200">
           <div className="flex items-center justify-between mb-2">
-            <BookOpen className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-            <span className="text-2xl font-bold text-primary-700 dark:text-primary-300">
+            <BookOpen className="h-5 w-5 text-primary-600" />
+            <span className="text-2xl font-bold text-primary-700">
               {analytics.totalCards}
             </span>
           </div>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">Всего карточек</p>
+          <p className="text-sm text-neutral-600">Всего карточек</p>
         </div>
 
-        <div className="bg-gradient-to-br from-accent-50 to-accent-50 dark:from-neutral-800 dark:to-neutral-800 p-4 rounded-xl border-2 border-accent-200 dark:border-neutral-700">
+        <div className="bg-gradient-to-br from-accent-50 to-accent-50 p-4 rounded-xl border-2 border-accent-200">
           <div className="flex items-center justify-between mb-2">
-            <CheckCircle className="h-5 w-5 text-accent-600 dark:text-accent-400" />
-            <span className="text-2xl font-bold text-accent-700 dark:text-accent-300">
+            <CheckCircle className="h-5 w-5 text-accent-600" />
+            <span className="text-2xl font-bold text-accent-700">
               {analytics.studiedCards}
             </span>
           </div>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm text-neutral-600">
             Изучено ({analytics.studiedPercentage}%)
           </p>
         </div>
 
-        <div className="bg-gradient-to-br from-education-50 to-education-50 dark:from-neutral-800 dark:to-neutral-800 p-4 rounded-xl border-2 border-education-200 dark:border-neutral-700">
+        <div className="bg-gradient-to-br from-education-50 to-education-50 p-4 rounded-xl border-2 border-education-200">
           <div className="flex items-center justify-between mb-2">
-            <Clock className="h-5 w-5 text-education-600 dark:text-education-400" />
-            <span className="text-2xl font-bold text-education-700 dark:text-education-300">
+            <Clock className="h-5 w-5 text-education-600" />
+            <span className="text-2xl font-bold text-education-700">
               {analytics.dueForReview}
             </span>
           </div>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">К повторению</p>
+          <p className="text-sm text-neutral-600">К повторению</p>
         </div>
 
-        <div className="bg-gradient-to-br from-primary-50 to-accent-50 dark:from-neutral-800 dark:to-neutral-800 p-4 rounded-xl border-2 border-primary-200 dark:border-neutral-700">
+        <div className="bg-gradient-to-br from-primary-50 to-accent-50 p-4 rounded-xl border-2 border-primary-200">
           <div className="flex items-center justify-between mb-2">
-            <Award className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-            <span className="text-2xl font-bold text-primary-700 dark:text-primary-300">
+            <Award className="h-5 w-5 text-primary-600" />
+            <span className="text-2xl font-bold text-primary-700">
               {analytics.masteredCards}
             </span>
           </div>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm text-neutral-600">
             Освоено ({analytics.masteryPercentage}%)
           </p>
         </div>
@@ -128,7 +128,7 @@ export default function FlashcardAnalytics({ deckId }: FlashcardAnalyticsProps) 
         {/* Difficulty Distribution */}
         {difficultyData.length > 0 && (
           <div>
-            <h4 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
+            <h4 className="text-lg font-semibold text-neutral-900 mb-4">
               Распределение по сложности
             </h4>
             <ResponsiveContainer width="100%" height={200}>
@@ -149,7 +149,7 @@ export default function FlashcardAnalytics({ deckId }: FlashcardAnalyticsProps) 
 
         {/* Progress Chart */}
         <div>
-          <h4 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
+          <h4 className="text-lg font-semibold text-neutral-900 mb-4">
             Прогресс изучения
           </h4>
           <ResponsiveContainer width="100%" height={200}>
@@ -169,21 +169,21 @@ export default function FlashcardAnalytics({ deckId }: FlashcardAnalyticsProps) 
       </div>
 
       {/* Additional Stats */}
-      <div className="mt-6 p-4 bg-primary-50 dark:bg-neutral-800 rounded-xl border-2 border-primary-200 dark:border-neutral-700">
+      <div className="mt-6 p-4 bg-primary-50 rounded-xl border-2 border-primary-200">
         <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-          <h4 className="font-semibold text-neutral-900 dark:text-neutral-100">Дополнительная статистика</h4>
+          <TrendingUp className="h-5 w-5 text-primary-600" />
+          <h4 className="font-semibold text-neutral-900">Дополнительная статистика</h4>
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-neutral-600 dark:text-neutral-400">Среднее количество повторений</p>
-            <p className="text-lg font-bold text-primary-700 dark:text-primary-300">
+            <p className="text-neutral-600">Среднее количество повторений</p>
+            <p className="text-lg font-bold text-primary-700">
               {analytics.averageReviewCount}
             </p>
           </div>
           <div>
-            <p className="text-neutral-600 dark:text-neutral-400">Процент изучения</p>
-            <p className="text-lg font-bold text-primary-700 dark:text-primary-300">
+            <p className="text-neutral-600">Процент изучения</p>
+            <p className="text-lg font-bold text-primary-700">
               {analytics.studiedPercentage}%
             </p>
           </div>

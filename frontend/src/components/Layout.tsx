@@ -11,7 +11,7 @@ export default function Layout() {
   const isStudent = user?.role === 'STUDENT';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-primary-50/30 to-primary-50/20 dark:from-neutral-900 dark:via-neutral-800/50 dark:to-neutral-900">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-primary-50/30 to-primary-50/20">
       <Header />
       <div className="flex">
         {isTeacher && <Sidebar />}

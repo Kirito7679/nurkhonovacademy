@@ -96,3 +96,4 @@ npx @railway/cli run --service backend npx prisma migrate deploy
 **Текущий статус**: Серверы работают, но функциональность классов требует применения миграции БД.
 
 
+
