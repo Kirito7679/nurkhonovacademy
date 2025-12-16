@@ -76,6 +76,16 @@ export default function CourseForm() {
         queryClient.invalidateQueries('teacherCourses');
         navigate(`/teacher/courses/${course?.id}/edit`);
       },
+      onError: (error: any) => {
+        if (error.response?.status === 403 && error.response?.data?.message?.includes('оплатить')) {
+          navigate('/teacher/payment');
+        } else {
+          setErrorModal({
+            isOpen: true,
+            message: error.response?.data?.message || 'Ошибка при создании курса',
+          });
+        }
+      },
     }
   );
 
