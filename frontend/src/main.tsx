@@ -11,6 +11,13 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes - данные считаются свежими
+      cacheTime: 10 * 60 * 1000, // 10 minutes - хранить в кеше
+      refetchOnMount: false, // Не обновлять при монтировании, если данные свежие
+      refetchOnReconnect: true, // Обновлять при переподключении
+    },
+    mutations: {
+      retry: 1,
     },
   },
 })

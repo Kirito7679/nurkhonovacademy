@@ -1,12 +1,13 @@
 import { useQuery } from 'react-query';
 import api from '../services/api';
 import { ApiResponse, Banner as BannerType } from '../types';
+import { memo } from 'react';
 
 interface BannerProps {
   position?: 'TOP' | 'BOTTOM' | 'SIDEBAR';
 }
 
-export default function Banner({ position = 'TOP' }: BannerProps) {
+const Banner = memo(function Banner({ position = 'TOP' }: BannerProps) {
   const { data: bannersResponse } = useQuery(
     ['banners', position],
     async () => {
@@ -14,6 +15,11 @@ export default function Banner({ position = 'TOP' }: BannerProps) {
         params: { position },
       });
       return response.data.data || [];
+    },
+    {
+      staleTime: 15 * 60 * 1000, // 15 minutes - banners change rarely
+      cacheTime: 30 * 60 * 1000, // 30 minutes
+      refetchOnWindowFocus: false,
     }
   );
 
@@ -42,4 +48,6 @@ export default function Banner({ position = 'TOP' }: BannerProps) {
       ))}
     </div>
   );
-}
+});
+
+export default Banner;

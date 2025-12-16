@@ -1,35 +1,50 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { useAuthStore } from './store/authStore';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import StudentDashboard from './pages/StudentDashboard';
-import Courses from './pages/Courses';
-import CourseDetails from './pages/CourseDetails';
-import LessonView from './pages/LessonView';
-import Profile from './pages/Profile';
-import TeacherDashboard from './pages/TeacherDashboard';
-import TeacherStatistics from './pages/TeacherStatistics';
-import Students from './pages/Students';
-import StudentDetails from './pages/StudentDetails';
-import TeacherCourses from './pages/TeacherCourses';
-import CourseForm from './pages/CourseForm';
-import LessonForm from './pages/LessonForm';
-import Chat from './pages/Chat';
-import TeacherChats from './pages/TeacherChats';
-import FlashcardDecks from './pages/FlashcardDecks';
-import FlashcardStudy from './pages/FlashcardStudy';
-import FlashcardDeckEdit from './pages/FlashcardDeckEdit';
-import PracticeExercises from './pages/PracticeExercises';
-import Integrations from './pages/Integrations';
-import Classes from './pages/Classes';
-import ClassDetails from './pages/ClassDetails';
-import ClassChat from './pages/ClassChat';
-import Curators from './pages/Curators';
-import TeacherPayment from './pages/TeacherPayment';
-import IntermediateTestForm from './pages/IntermediateTestForm';
-import IntermediateTestView from './pages/IntermediateTestView';
 import Layout from './components/Layout';
 import { Role } from './types';
+
+// Lazy load all pages for code splitting
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const Courses = lazy(() => import('./pages/Courses'));
+const CourseDetails = lazy(() => import('./pages/CourseDetails'));
+const LessonView = lazy(() => import('./pages/LessonView'));
+const Profile = lazy(() => import('./pages/Profile'));
+const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
+const TeacherStatistics = lazy(() => import('./pages/TeacherStatistics'));
+const Students = lazy(() => import('./pages/Students'));
+const StudentDetails = lazy(() => import('./pages/StudentDetails'));
+const TeacherCourses = lazy(() => import('./pages/TeacherCourses'));
+const CourseForm = lazy(() => import('./pages/CourseForm'));
+const LessonForm = lazy(() => import('./pages/LessonForm'));
+const Chat = lazy(() => import('./pages/Chat'));
+const TeacherChats = lazy(() => import('./pages/TeacherChats'));
+const FlashcardDecks = lazy(() => import('./pages/FlashcardDecks'));
+const FlashcardStudy = lazy(() => import('./pages/FlashcardStudy'));
+const FlashcardDeckEdit = lazy(() => import('./pages/FlashcardDeckEdit'));
+const PracticeExercises = lazy(() => import('./pages/PracticeExercises'));
+const Integrations = lazy(() => import('./pages/Integrations'));
+const Classes = lazy(() => import('./pages/Classes'));
+const ClassDetails = lazy(() => import('./pages/ClassDetails'));
+const ClassChat = lazy(() => import('./pages/ClassChat'));
+const Curators = lazy(() => import('./pages/Curators'));
+const TeacherPayment = lazy(() => import('./pages/TeacherPayment'));
+const IntermediateTestForm = lazy(() => import('./pages/IntermediateTestForm'));
+const IntermediateTestView = lazy(() => import('./pages/IntermediateTestView'));
+
+// Loading component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="text-center">
+      <div className="inline-block relative">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-200 border-t-primary-500"></div>
+      </div>
+      <p className="mt-4 text-neutral-600">Загрузка...</p>
+    </div>
+  </div>
+);
 
 function PrivateRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: Role[] }) {
   const { isAuthenticated, user } = useAuthStore();
@@ -53,7 +68,8 @@ function App() {
         v7_relativeSplatPath: true,
       }}
     >
-      <Routes>
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         
@@ -311,7 +327,8 @@ function App() {
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

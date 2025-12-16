@@ -33,16 +33,29 @@ export default function StudentDashboard() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   
-  const { data: coursesResponse, isLoading: coursesLoading } = useQuery('myCourses', async () => {
-    const response = await api.get<ApiResponse<Course[]>>('/courses');
-    return response.data.data || [];
-  });
+  const { data: coursesResponse, isLoading: coursesLoading } = useQuery(
+    'myCourses',
+    async () => {
+      const response = await api.get<ApiResponse<Course[]>>('/courses');
+      return response.data.data || [];
+    },
+    {
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  );
 
   const { data: statsResponse, isLoading: statsLoading } = useQuery(
     'myStats',
     async () => {
       const response = await api.get<ApiResponse<StudentStats>>('/auth/me/stats');
       return response.data.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes - stats change more frequently
+      cacheTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
     }
   );
 

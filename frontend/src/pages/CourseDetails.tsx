@@ -21,6 +21,11 @@ export default function CourseDetails() {
     async () => {
       const response = await api.get<ApiResponse<Course & { lessons: Lesson[] }>>(`/courses/${id}`);
       return response.data.data;
+    },
+    {
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
+      enabled: !!id,
     }
   );
 
@@ -30,7 +35,11 @@ export default function CourseDetails() {
       const response = await api.get<ApiResponse<Lesson[]>>(`/courses/${id}/lessons`);
       return response.data.data || [];
     },
-    { enabled: !!id }
+    {
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
+      enabled: !!id,
+    }
   );
 
   const { data: modulesResponse, isLoading: modulesLoading } = useQuery(
@@ -39,7 +48,11 @@ export default function CourseDetails() {
       const response = await api.get<ApiResponse<Module[]>>(`/modules/courses/${id}/modules`);
       return response.data.data || [];
     },
-    { enabled: !!id }
+    {
+      staleTime: 10 * 60 * 1000, // Modules change rarely
+      cacheTime: 20 * 60 * 1000,
+      enabled: !!id,
+    }
   );
 
   const { data: testsResponse } = useQuery(
@@ -48,7 +61,11 @@ export default function CourseDetails() {
       const response = await api.get<ApiResponse<IntermediateTest[]>>(`/tests/courses/${id}/tests`);
       return response.data.data || [];
     },
-    { enabled: !!id && course?.hasAccess }
+    {
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
+      enabled: !!id && course?.hasAccess,
+    }
   );
 
   const requestAccessMutation = useMutation(

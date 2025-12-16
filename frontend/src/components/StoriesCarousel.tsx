@@ -2,9 +2,9 @@ import { useQuery, useMutation } from 'react-query';
 import api from '../services/api';
 import { ApiResponse, Story } from '../types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 
-export default function StoriesCarousel() {
+const StoriesCarousel = memo(function StoriesCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isViewing, setIsViewing] = useState(false);
   const [viewingIndex, setViewingIndex] = useState(0);
@@ -14,6 +14,11 @@ export default function StoriesCarousel() {
     async () => {
       const response = await api.get<ApiResponse<Story[]>>('/stories');
       return response.data.data || [];
+    },
+    {
+      staleTime: 10 * 60 * 1000, // 10 minutes - stories don't change often
+      cacheTime: 30 * 60 * 1000, // 30 minutes
+      refetchOnWindowFocus: false,
     }
   );
 
@@ -129,4 +134,6 @@ export default function StoriesCarousel() {
       )}
     </>
   );
-}
+});
+
+export default StoriesCarousel;

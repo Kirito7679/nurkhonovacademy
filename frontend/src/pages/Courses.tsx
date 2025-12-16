@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -8,11 +8,13 @@ import { BookOpen, Lock, CheckCircle, ArrowRight, Eye, Grid3x3, List, Search, Fi
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
 
+const Courses = memo(function Courses() {
+
 type ViewMode = 'grid' | 'list';
 type StatusFilter = 'all' | 'approved' | 'pending' | 'locked';
 type SortBy = 'createdAt' | 'title' | 'lessons';
 
-export default function Courses() {
+function Courses() {
   const { t } = useTranslation();
   
   // Load saved preferences from localStorage
