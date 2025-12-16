@@ -1,28 +1,47 @@
 import { z } from 'zod';
 
+// Phone validation regex for Uzbekistan format: +998XXXXXXXXX or 998XXXXXXXXX
+const phoneRegex = /^(\+?998)?[0-9]{9}$/;
+
+// Password strength validation
+const passwordStrengthRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+
 export const registerSchema = z.object({
-  firstName: z.string().min(1, 'Имя обязательно'),
-  lastName: z.string().min(1, 'Фамилия обязательна'),
-  phone: z.string().min(10, 'Номер телефона должен содержать минимум 10 символов'),
-  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
+  firstName: z.string().min(1, 'Имя обязательно').max(50, 'Имя слишком длинное'),
+  lastName: z.string().min(1, 'Фамилия обязательна').max(50, 'Фамилия слишком длинная'),
+  phone: z.string()
+    .min(10, 'Номер телефона должен содержать минимум 10 символов')
+    .max(15, 'Номер телефона слишком длинный')
+    .regex(phoneRegex, 'Неверный формат номера телефона. Используйте формат: +998XXXXXXXXX или 998XXXXXXXXX'),
+  password: z.string()
+    .min(6, 'Пароль должен содержать минимум 6 символов')
+    .regex(passwordStrengthRegex, 'Пароль должен содержать буквы и цифры'),
 });
 
 export const loginSchema = z.object({
-  phone: z.string().min(1, 'Номер телефона обязателен'),
+  phone: z.string()
+    .min(1, 'Номер телефона обязателен')
+    .regex(phoneRegex, 'Неверный формат номера телефона'),
   password: z.string().min(1, 'Пароль обязателен'),
 });
 
 export const updateProfileSchema = z.object({
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().min(1).optional(),
-  phone: z.string().min(10).optional(),
-  email: z.string().email().optional().or(z.literal('')),
+  firstName: z.string().min(1, 'Имя обязательно').max(50, 'Имя слишком длинное').optional(),
+  lastName: z.string().min(1, 'Фамилия обязательна').max(50, 'Фамилия слишком длинная').optional(),
+  phone: z.string()
+    .min(10, 'Номер телефона должен содержать минимум 10 символов')
+    .max(15, 'Номер телефона слишком длинный')
+    .regex(phoneRegex, 'Неверный формат номера телефона')
+    .optional(),
+  email: z.string().email('Неверный формат email').optional().or(z.literal('')),
   language: z.enum(['ru', 'en', 'uz', 'kk']).optional(),
 });
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Текущий пароль обязателен'),
-  newPassword: z.string().min(6, 'Новый пароль должен содержать минимум 6 символов'),
+  newPassword: z.string()
+    .min(6, 'Новый пароль должен содержать минимум 6 символов')
+    .regex(passwordStrengthRegex, 'Пароль должен содержать буквы и цифры'),
 });
 
 export const courseSchema = z.object({
@@ -53,22 +72,34 @@ export const lessonSchema = z.object({
 });
 
 export const updateStudentSchema = z.object({
-  firstName: z.string().min(1, 'Имя обязательно').optional(),
-  lastName: z.string().min(1, 'Фамилия обязательна').optional(),
-  phone: z.string().min(10, 'Номер телефона должен содержать минимум 10 символов').optional(),
+  firstName: z.string().min(1, 'Имя обязательно').max(50, 'Имя слишком длинное').optional(),
+  lastName: z.string().min(1, 'Фамилия обязательна').max(50, 'Фамилия слишком длинная').optional(),
+  phone: z.string()
+    .min(10, 'Номер телефона должен содержать минимум 10 символов')
+    .max(15, 'Номер телефона слишком длинный')
+    .regex(phoneRegex, 'Неверный формат номера телефона')
+    .optional(),
   email: z.string().email('Неверный формат email').optional().or(z.literal('')),
 });
 
 export const resetPasswordSchema = z.object({
-  newPassword: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
+  newPassword: z.string()
+    .min(6, 'Пароль должен содержать минимум 6 символов')
+    .regex(passwordStrengthRegex, 'Пароль должен содержать буквы и цифры'),
 });
 
 export const createStudentSchema = z.object({
-  firstName: z.string().min(1, 'Имя обязательно'),
-  lastName: z.string().min(1, 'Фамилия обязательна'),
-  phone: z.string().min(10, 'Номер телефона должен содержать минимум 10 символов'),
-  email: z.string().email().optional().or(z.literal('')),
-  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов').optional(),
+  firstName: z.string().min(1, 'Имя обязательно').max(50, 'Имя слишком длинное'),
+  lastName: z.string().min(1, 'Фамилия обязательна').max(50, 'Фамилия слишком длинная'),
+  phone: z.string()
+    .min(10, 'Номер телефона должен содержать минимум 10 символов')
+    .max(15, 'Номер телефона слишком длинный')
+    .regex(phoneRegex, 'Неверный формат номера телефона'),
+  email: z.string().email('Неверный формат email').optional().or(z.literal('')),
+  password: z.string()
+    .min(6, 'Пароль должен содержать минимум 6 символов')
+    .regex(passwordStrengthRegex, 'Пароль должен содержать буквы и цифры')
+    .optional(),
 });
 
 // Video URL validation helper (supports multiple sources)

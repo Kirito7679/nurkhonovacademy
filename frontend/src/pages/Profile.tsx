@@ -11,17 +11,29 @@ import { User as UserIcon, Lock, Upload, Camera, Globe } from 'lucide-react';
 import SuccessModal from '../components/SuccessModal';
 import FileUploadProgress from '../components/FileUploadProgress';
 
+// Phone validation regex for Uzbekistan format: +998XXXXXXXXX or 998XXXXXXXXX
+const phoneRegex = /^(\+?998)?[0-9]{9}$/;
+
+// Password strength validation (must contain letters and numbers)
+const passwordStrengthRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+
 const profileSchema = z.object({
-  firstName: z.string().min(1, 'Имя обязательно'),
-  lastName: z.string().min(1, 'Фамилия обязательна'),
-  phone: z.string().min(10, 'Номер телефона должен содержать минимум 10 символов'),
+  firstName: z.string().min(1, 'Имя обязательно').max(50, 'Имя слишком длинное'),
+  lastName: z.string().min(1, 'Фамилия обязательна').max(50, 'Фамилия слишком длинная'),
+  phone: z.string()
+    .min(10, 'Номер телефона должен содержать минимум 10 символов')
+    .max(15, 'Номер телефона слишком длинный')
+    .regex(phoneRegex, 'Неверный формат номера телефона')
+    .optional(),
   email: z.string().email('Неверный формат email').optional().or(z.literal('')),
   language: z.string().optional(),
 });
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Текущий пароль обязателен'),
-  newPassword: z.string().min(6, 'Новый пароль должен содержать минимум 6 символов'),
+  newPassword: z.string()
+    .min(6, 'Новый пароль должен содержать минимум 6 символов')
+    .regex(passwordStrengthRegex, 'Пароль должен содержать буквы и цифры'),
   confirmPassword: z.string().min(6, 'Подтверждение пароля обязательно'),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: 'Пароли не совпадают',
@@ -68,7 +80,13 @@ export default function Profile() {
         }
       },
       onError: (err: ApiError) => {
-        setErrorMessage(err.response?.data?.message || 'Ошибка при обновлении профиля');
+        if ((err as any).isNetworkError) {
+          setErrorMessage('Ошибка сети. Проверьте подключение к интернету и попробуйте снова.');
+        } else if ((err as any).isTimeout) {
+          setErrorMessage('Превышено время ожидания. Попробуйте снова.');
+        } else {
+          setErrorMessage(err.response?.data?.message || 'Ошибка при обновлении профиля');
+        }
       },
     }
   );
@@ -86,7 +104,13 @@ export default function Profile() {
         setErrorMessage('');
       },
       onError: (err: ApiError) => {
-        setErrorMessage(err.response?.data?.message || 'Ошибка при смене пароля');
+        if ((err as any).isNetworkError) {
+          setErrorMessage('Ошибка сети. Проверьте подключение к интернету и попробуйте снова.');
+        } else if ((err as any).isTimeout) {
+          setErrorMessage('Превышено время ожидания. Попробуйте снова.');
+        } else {
+          setErrorMessage(err.response?.data?.message || 'Ошибка при смене пароля');
+        }
       },
     }
   );
@@ -137,15 +161,19 @@ export default function Profile() {
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
+    const allowedExtensions = /\.(jpg|jpeg|png|gif|webp)$/i;
+    
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.test(file.name)) {
       setErrorMessage('Разрешены только изображения (JPEG, PNG, GIF, WebP)');
+      e.target.value = '';
       return;
     }
 
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      setErrorMessage('Размер файла не должен превышать 5MB');
+      setErrorMessage(`Размер файла не должен превышать ${(maxSize / 1024 / 1024).toFixed(0)} MB. Текущий размер: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+      e.target.value = '';
       return;
     }
 
@@ -232,17 +260,21 @@ export default function Profile() {
                     : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://api.academy.dilmurodnurkhonov.uz'}${userResponse.avatarUrl}`}
                   alt={`${userResponse.firstName} ${userResponse.lastName}`}
                   className="w-full h-full object-cover"
+                  loading="lazy"
                   onError={(e) => {
                     console.error('Error loading avatar:', userResponse.avatarUrl);
                     // Fallback to icon if image fails to load
                     e.currentTarget.style.display = 'none';
-                  }}
-                  onLoad={() => {
-                    console.log('Avatar loaded successfully:', userResponse.avatarUrl);
+                    // Show icon as fallback
+                    const icon = e.currentTarget.parentElement?.querySelector('.avatar-fallback-icon');
+                    if (icon) {
+                      (icon as HTMLElement).style.display = 'block';
+                    }
                   }}
                 />
-              ) : (
-                <UserIcon className="h-12 w-12" />
+              ) : null}
+              {!userResponse?.avatarUrl && (
+                <UserIcon className="h-12 w-12 avatar-fallback-icon" />
               )}
               <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none">
                 {uploadingAvatar ? (

@@ -17,7 +17,7 @@ export default function Header() {
     navigate('/login');
   };
 
-  const isTeacher = user?.role === Role.TEACHER || user?.role === Role.ADMIN;
+  const isTeacher = user?.role === Role.TEACHER || user?.role === Role.ADMIN || user?.role === Role.CURATOR;
 
   return (
     <header className="bg-white/95 backdrop-blur-md border-b-2 border-primary-200/50 sticky top-0 z-50 shadow-education">

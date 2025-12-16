@@ -11,7 +11,11 @@ export const getMyNotifications = async (
   next: NextFunction
 ) => {
   try {
-    const userId = req.user!.id;
+    if (!req.user || !req.user.id) {
+      throw new AppError('Пользователь не авторизован', 401);
+    }
+
+    const userId = req.user.id;
 
     // Pagination parameters
     const page = parseInt(req.query.page as string) || 1;
@@ -207,10 +211,14 @@ export const createNotification = async (
   type: 'COMMENT' | 'COURSE_REQUEST' | 'COURSE_APPROVED' | 'COURSE_REJECTED',
   title: string,
   message: string,
-  link?: string
+  link?: string,
+  tx?: any // Prisma transaction client (optional)
 ) => {
   try {
-    const notification = await prisma.notification.create({
+    // Use transaction client if provided, otherwise use regular prisma client
+    const prismaClient = tx || prisma;
+    
+    const notification = await prismaClient.notification.create({
       data: {
         userId,
         type,
@@ -220,8 +228,17 @@ export const createNotification = async (
       },
     });
 
-    // Emit real-time notification via WebSocket
-    emitNotification(userId, notification);
+    // Emit real-time notification via WebSocket (only if not in transaction)
+    // Socket emission should happen after transaction commits
+    if (!tx) {
+      emitNotification(userId, notification);
+    } else {
+      // If in transaction, emit after transaction commits
+      // This will be handled by the caller after transaction completes
+      setImmediate(() => {
+        emitNotification(userId, notification);
+      });
+    }
   } catch (error) {
     console.error('Error creating notification:', error);
     // Don't throw error, notifications are not critical

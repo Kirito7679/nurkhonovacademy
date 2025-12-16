@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
+    "@types/react-simple-maps": "^3.0.6",
     "axios": "^1.6.2",
     "dompurify": "^3.3.1",
     "i18next": "^25.7.2",
@@ -24,6 +25,7 @@
     "react-player": "^2.13.0",
     "react-query": "^3.39.3",
     "react-router-dom": "^6.21.1",
+    "react-simple-maps": "^3.0.0",
     "recharts": "^3.5.1",
     "socket.io-client": "^4.8.1",
     "zod": "^3.22.4",

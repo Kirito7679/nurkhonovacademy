@@ -66,6 +66,32 @@ export const register = async (
       },
     });
 
+    // Log registration activity with location (async, don't wait)
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const forwardedForStr = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+    const ip = req.ip || 
+               (forwardedForStr ? forwardedForStr.split(',')[0]?.trim() : undefined) ||
+               (typeof req.headers['x-real-ip'] === 'string' ? req.headers['x-real-ip'] : undefined) ||
+               req.connection?.remoteAddress ||
+               '';
+    const userAgent = req.headers['user-agent'] || '';
+
+    prisma.activityLog.create({
+      data: {
+        userId: user.id,
+        action: 'CREATE',
+        entityType: 'USER',
+        entityId: user.id,
+        ipAddress: ip,
+        userAgent: userAgent,
+        city: location.city || undefined,
+        region: location.region || undefined,
+        country: location.country || undefined,
+      },
+    }).catch((err) => {
+      console.error('Error logging registration activity:', err);
+    });
+
     // Generate token
     // @ts-expect-error - jwt.sign has complex overloads that TypeScript can't infer correctly
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
@@ -111,6 +137,34 @@ export const login = async (
       throw new AppError('Неверный номер телефона или пароль', 401);
     }
 
+    // Get user location from IP
+    const location = await getLocationFromRequest(req);
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const forwardedForStr = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+    const ip = req.ip || 
+               (forwardedForStr ? forwardedForStr.split(',')[0]?.trim() : undefined) ||
+               (typeof req.headers['x-real-ip'] === 'string' ? req.headers['x-real-ip'] : undefined) ||
+               req.connection?.remoteAddress ||
+               '';
+    const userAgent = req.headers['user-agent'] || '';
+
+    // Log login activity with location (async, don't wait)
+    prisma.activityLog.create({
+      data: {
+        userId: user.id,
+        action: 'LOGIN',
+        entityType: 'USER',
+        entityId: user.id,
+        ipAddress: ip,
+        userAgent: userAgent,
+        city: location.city || undefined,
+        region: location.region || undefined,
+        country: location.country || undefined,
+      },
+    }).catch((err) => {
+      console.error('Error logging login activity:', err);
+    });
+
     // Generate token
     // @ts-expect-error - jwt.sign has complex overloads that TypeScript can't infer correctly
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
@@ -129,6 +183,8 @@ export const login = async (
           avatarUrl: user.avatarUrl,
           role: user.role,
           language: user.language,
+          hasFlashcardsAccess: user.hasFlashcardsAccess,
+          hasIntegrationsAccess: user.hasIntegrationsAccess,
         },
         token,
       },
@@ -157,6 +213,8 @@ export const getMe = async (
         language: true,
         isPaidTeacher: true,
         coins: true,
+        hasFlashcardsAccess: true,
+        hasIntegrationsAccess: true,
         city: true,
         region: true,
         country: true,

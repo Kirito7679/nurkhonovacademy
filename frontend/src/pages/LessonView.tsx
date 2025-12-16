@@ -115,7 +115,7 @@ export default function LessonView() {
 
   const canDeleteFile = (lesson: Lesson) => {
     if (!user) return false;
-    return user.role === Role.TEACHER || user.role === Role.ADMIN;
+    return user.role === Role.TEACHER || user.role === Role.ADMIN || user.role === Role.CURATOR;
   };
 
   const handleDownload = async (e: React.MouseEvent<HTMLButtonElement>, fileUrl: string, fileName: string) => {

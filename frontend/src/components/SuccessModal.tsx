@@ -1,4 +1,5 @@
 import { X, CheckCircle } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface SuccessModalProps {
   isOpen: boolean;
@@ -15,6 +16,45 @@ export default function SuccessModal({
   message,
   buttonText = 'OK',
 }: SuccessModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Handle ESC key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  // Focus on button when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        buttonRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -25,12 +65,21 @@ export default function SuccessModal({
           onClose();
         }
       }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="success-modal-title"
+      aria-describedby="success-modal-message"
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-slide-in overflow-hidden">
+      <div
+        ref={modalRef}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-slide-in overflow-hidden"
+      >
         {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 text-neutral-400 hover:text-neutral-600 transition-colors bg-white/80 backdrop-blur-sm rounded-full p-1.5 hover:bg-white"
+          aria-label="Закрыть"
+          tabIndex={0}
         >
           <X className="h-5 w-5" />
         </button>
@@ -41,7 +90,7 @@ export default function SuccessModal({
             <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/20 backdrop-blur-sm border-2 border-white/30">
               <CheckCircle className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-2xl md:text-3xl font-bold text-white pr-8">
+            <h3 id="success-modal-title" className="text-2xl md:text-3xl font-bold text-white pr-8">
               {title}
             </h3>
           </div>
@@ -50,13 +99,16 @@ export default function SuccessModal({
         {/* Content */}
         <div className="p-6 md:p-8">
           <div className="space-y-6">
-            <p className="text-neutral-700 text-base leading-relaxed">
+            <p id="success-modal-message" className="text-neutral-700 text-base leading-relaxed">
               {message}
             </p>
 
             <button
+              ref={buttonRef}
               onClick={onClose}
               className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:scale-[1.02] transition-all"
+              tabIndex={0}
+              autoFocus
             >
               {buttonText}
             </button>

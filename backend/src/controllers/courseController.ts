@@ -4,6 +4,7 @@ import { AppError } from '../utils/errors';
 import { AuthRequest } from '../middleware/auth';
 import { courseSchema } from '../utils/validation';
 import { createNotification } from './notificationController';
+import { checkCourseAccess, canEditCourse } from '../utils/accessControl';
 
 export const getAllCourses = async (
   req: AuthRequest,
@@ -124,6 +125,8 @@ export const getAllCourses = async (
         select: {
           courseId: true,
           approvedAt: true,
+          accessStartDate: true,
+          accessEndDate: true,
         },
       });
 
@@ -131,36 +134,58 @@ export const getAllCourses = async (
         studentCoursesForSub.map(sc => [sc.courseId, sc])
       );
 
+      const now = new Date();
+
       let coursesWithAccess = courses.map((course) => {
         const studentCourseStatus = studentCourseMap.get(course.id);
-        const hasAccess = studentCourseStatus === 'APPROVED';
+        const studentCourse = studentCourseSubMap.get(course.id);
         
         // Check if course has trial lesson
         const hasTrialAccess = !!course.trialLessonId;
 
-        // Check subscription status
+        // Check access and subscription status
+        let hasAccess = studentCourseStatus === 'APPROVED';
         let subscriptionStatus = null;
         let trialDaysRemaining = null;
-        if (hasAccess && studentCourseStatus) {
-          const studentCourse = studentCourseSubMap.get(course.id);
+        let isSubscriptionExpired = false;
 
-          if (studentCourse && course.subscriptionType === 'TRIAL' && course.trialPeriodDays && studentCourse.approvedAt) {
-            const enrolledDate = new Date(studentCourse.approvedAt);
-            const trialEndDate = new Date(enrolledDate);
-            trialEndDate.setDate(trialEndDate.getDate() + course.trialPeriodDays);
-            const now = new Date();
-            
-            if (now < trialEndDate) {
-              subscriptionStatus = 'TRIAL';
-              const daysLeft = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-              trialDaysRemaining = daysLeft;
-            } else {
+        if (hasAccess && studentCourse) {
+          // Check if subscription is still valid based on accessEndDate
+          if (studentCourse.accessEndDate) {
+            const endDate = new Date(studentCourse.accessEndDate);
+            if (now >= endDate) {
+              hasAccess = false;
+              isSubscriptionExpired = true;
               subscriptionStatus = 'EXPIRED';
+            } else {
+              // Subscription is still active
+              if (course.subscriptionType === 'TRIAL') {
+                subscriptionStatus = 'TRIAL';
+                const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                trialDaysRemaining = daysLeft;
+              } else if (course.subscriptionType === 'PAID') {
+                subscriptionStatus = 'PAID';
+              } else if (course.subscriptionType === 'FREE') {
+                subscriptionStatus = 'FREE';
+              }
             }
-          } else if (course.subscriptionType === 'FREE') {
-            subscriptionStatus = 'FREE';
-          } else if (course.subscriptionType === 'PAID') {
-            subscriptionStatus = 'PAID';
+          } else {
+            // No end date means unlimited access
+            if (course.subscriptionType === 'FREE') {
+              subscriptionStatus = 'FREE';
+            } else if (course.subscriptionType === 'PAID') {
+              subscriptionStatus = 'PAID';
+            } else if (course.subscriptionType === 'TRIAL') {
+              subscriptionStatus = 'TRIAL';
+            }
+          }
+
+          // Check if start date has passed
+          if (hasAccess && studentCourse.accessStartDate) {
+            const startDate = new Date(studentCourse.accessStartDate);
+            if (now < startDate) {
+              hasAccess = false;
+            }
           }
         }
 
@@ -172,6 +197,7 @@ export const getAllCourses = async (
           hasTrialAccess,
           subscriptionStatus,
           trialDaysRemaining,
+          isSubscriptionExpired,
         };
       });
 
@@ -252,23 +278,15 @@ export const getCourseById = async (
       throw new AppError('Курс не найден', 404);
     }
 
-    // Check if student has access
+    // Check if student has access using centralized access control
     let hasAccess = false;
-    let studentCourse = null;
+    let accessInfo: any = {};
 
     if (req.user?.role === 'STUDENT') {
-      studentCourse = await prisma.studentCourse.findUnique({
-        where: {
-          studentId_courseId: {
-            studentId: req.user.id,
-            courseId: id,
-          },
-        },
-      });
-
-      hasAccess = studentCourse?.status === 'APPROVED';
+      accessInfo = await checkCourseAccess(req.user.id, id);
+      hasAccess = accessInfo.hasAccess;
     } else if (req.user?.role === 'TEACHER' || req.user?.role === 'ADMIN') {
-      hasAccess = course.teacherId === req.user.id || req.user.role === 'ADMIN';
+      hasAccess = canEditCourse(req.user.id, req.user.role, course.teacherId);
     }
 
     res.json({
@@ -276,7 +294,10 @@ export const getCourseById = async (
       data: {
         ...course,
         hasAccess,
-        studentCourseStatus: studentCourse?.status || null,
+        studentCourseStatus: accessInfo.studentCourseStatus || null,
+        isSubscriptionExpired: accessInfo.isSubscriptionExpired || false,
+        accessEndDate: accessInfo.accessEndDate || null,
+        accessStartDate: accessInfo.accessStartDate || null,
       },
     });
   } catch (error) {
@@ -296,6 +317,31 @@ export const createCourse = async (
     }
 
     const validatedData = courseSchema.parse(req.body);
+
+    // Validate trialLessonId if provided
+    // Note: We can't check if lesson belongs to this course yet (course doesn't exist),
+    // but we can check if lesson exists and belongs to the same teacher
+    if (validatedData.trialLessonId) {
+      const trialLesson = await prisma.lesson.findUnique({
+        where: { id: validatedData.trialLessonId },
+        include: {
+          course: {
+            select: {
+              teacherId: true,
+            },
+          },
+        },
+      });
+
+      if (!trialLesson) {
+        throw new AppError('Пробный урок не найден', 404);
+      }
+
+      // Check if lesson belongs to the same teacher (or admin can use any lesson)
+      if (trialLesson.course.teacherId !== req.user!.id && req.user!.role !== 'ADMIN') {
+        throw new AppError('Пробный урок должен принадлежать вам', 403);
+      }
+    }
 
     const course = await prisma.course.create({
       data: {
@@ -346,8 +392,37 @@ export const updateCourse = async (
       throw new AppError('Курс не найден', 404);
     }
 
-    if (existingCourse.teacherId !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (!canEditCourse(req.user!.id, req.user!.role, existingCourse.teacherId)) {
       throw new AppError('Недостаточно прав для редактирования этого курса', 403);
+    }
+
+    // Validate trialLessonId if provided and changed
+    if (validatedData.trialLessonId && validatedData.trialLessonId !== existingCourse.trialLessonId) {
+      const trialLesson = await prisma.lesson.findUnique({
+        where: { id: validatedData.trialLessonId },
+        include: {
+          course: {
+            select: {
+              id: true,
+              teacherId: true,
+            },
+          },
+        },
+      });
+
+      if (!trialLesson) {
+        throw new AppError('Пробный урок не найден', 404);
+      }
+
+      // Check if lesson belongs to this course
+      if (trialLesson.courseId !== id) {
+        throw new AppError('Пробный урок должен принадлежать этому курсу', 400);
+      }
+
+      // Additional check: lesson should belong to the same teacher
+      if (trialLesson.course.teacherId !== existingCourse.teacherId) {
+        throw new AppError('Пробный урок должен принадлежать этому курсу', 400);
+      }
     }
 
     const course = await prisma.course.update({
@@ -394,7 +469,7 @@ export const deleteCourse = async (
       throw new AppError('Курс не найден', 404);
     }
 
-    if (course.teacherId !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (!canEditCourse(req.user!.id, req.user!.role, course.teacherId)) {
       throw new AppError('Недостаточно прав для удаления этого курса', 403);
     }
 

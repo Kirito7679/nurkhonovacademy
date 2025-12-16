@@ -30,6 +30,7 @@ const Classes = lazy(() => import('./pages/Classes'));
 const ClassDetails = lazy(() => import('./pages/ClassDetails'));
 const ClassChat = lazy(() => import('./pages/ClassChat'));
 const Curators = lazy(() => import('./pages/Curators'));
+const TeacherDetails = lazy(() => import('./pages/TeacherDetails'));
 const TeacherPayment = lazy(() => import('./pages/TeacherPayment'));
 const IntermediateTestForm = lazy(() => import('./pages/IntermediateTestForm'));
 const IntermediateTestView = lazy(() => import('./pages/IntermediateTestView'));
@@ -46,7 +47,17 @@ const LoadingFallback = () => (
   </div>
 );
 
-function PrivateRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: Role[] }) {
+function PrivateRoute({ 
+  children, 
+  allowedRoles, 
+  requireFlashcardsAccess,
+  requireIntegrationsAccess 
+}: { 
+  children: React.ReactNode; 
+  allowedRoles: Role[];
+  requireFlashcardsAccess?: boolean;
+  requireIntegrationsAccess?: boolean;
+}) {
   const { isAuthenticated, user } = useAuthStore();
 
   if (!isAuthenticated) {
@@ -55,6 +66,20 @@ function PrivateRoute({ children, allowedRoles }: { children: React.ReactNode; a
 
   if (user && !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Для студентов проверяем специальные разрешения
+  // Учителя, админы, модераторы и кураторы всегда имеют доступ
+  const isTeacherOrAdmin = user?.role === Role.TEACHER || user?.role === Role.ADMIN || 
+                           user?.role === Role.MODERATOR || user?.role === Role.CURATOR;
+  
+  if (user?.role === Role.STUDENT && !isTeacherOrAdmin) {
+    if (requireFlashcardsAccess && !user.hasFlashcardsAccess) {
+      return <Navigate to="/dashboard" replace />;
+    }
+    if (requireIntegrationsAccess && !user.hasIntegrationsAccess) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;
@@ -76,7 +101,7 @@ function App() {
         <Route
           path="/"
           element={
-            <PrivateRoute allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN]}>
+            <PrivateRoute allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.CURATOR]}>
               <Layout />
             </PrivateRoute>
           }
@@ -141,7 +166,10 @@ function App() {
           <Route
             path="/flashcards"
             element={
-              <PrivateRoute allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
+              <PrivateRoute 
+                allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.MODERATOR]}
+                requireFlashcardsAccess={true}
+              >
                 <FlashcardDecks />
               </PrivateRoute>
             }
@@ -149,7 +177,10 @@ function App() {
           <Route
             path="/flashcards/:id/study"
             element={
-              <PrivateRoute allowedRoles={[Role.STUDENT]}>
+              <PrivateRoute 
+                allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.MODERATOR]}
+                requireFlashcardsAccess={true}
+              >
                 <FlashcardStudy />
               </PrivateRoute>
             }
@@ -173,7 +204,10 @@ function App() {
           <Route
             path="/integrations"
             element={
-              <PrivateRoute allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
+              <PrivateRoute 
+                allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.MODERATOR]}
+                requireIntegrationsAccess={true}
+              >
                 <Integrations />
               </PrivateRoute>
             }
@@ -183,7 +217,7 @@ function App() {
           <Route
             path="/teacher/dashboard"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.CURATOR]}>
                 <TeacherDashboard />
               </PrivateRoute>
             }
@@ -191,7 +225,7 @@ function App() {
           <Route
             path="/teacher/statistics"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.CURATOR]}>
                 <TeacherStatistics />
               </PrivateRoute>
             }
@@ -199,7 +233,7 @@ function App() {
           <Route
             path="/teacher/students"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR, Role.ASSISTANT]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR, Role.ASSISTANT, Role.CURATOR]}>
                 <Students />
               </PrivateRoute>
             }
@@ -207,7 +241,7 @@ function App() {
           <Route
             path="/teacher/students/:id"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR, Role.ASSISTANT]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR, Role.ASSISTANT, Role.CURATOR]}>
                 <StudentDetails />
               </PrivateRoute>
             }
@@ -263,7 +297,7 @@ function App() {
           <Route
             path="/teacher/profile"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.CURATOR]}>
                 <Profile />
               </PrivateRoute>
             }
@@ -271,7 +305,7 @@ function App() {
           <Route
             path="/teacher/chats"
             element={
-              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.CURATOR]}>
                 <TeacherChats />
               </PrivateRoute>
             }
@@ -321,6 +355,14 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[Role.ADMIN]}>
                 <Curators />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/curators/:id"
+            element={
+              <PrivateRoute allowedRoles={[Role.ADMIN]}>
+                <TeacherDetails />
               </PrivateRoute>
             }
           />

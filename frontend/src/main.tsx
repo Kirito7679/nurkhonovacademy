@@ -1,10 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from 'react-query'
-import App from './App.tsx'
-import ErrorBoundary from './components/ErrorBoundary.tsx'
+// Импортируем i18n ПЕРЕД App, чтобы гарантировать инициализацию
 import './i18n/config'
 import './index.css'
+import App from './App.tsx'
+import ErrorBoundary from './components/ErrorBoundary.tsx'
 
 const queryClient = new QueryClient({
   defaultOptions: {

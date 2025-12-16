@@ -11,13 +11,26 @@ import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
 import { useAuthStore } from '../store/authStore';
 import ConfirmModal from '../components/ConfirmModal';
+import { useToastStore } from '../store/toastStore';
+
+// Phone validation regex for Uzbekistan format: +998XXXXXXXXX or 998XXXXXXXXX
+const phoneRegex = /^(\+?998)?[0-9]{9}$/;
+
+// Password strength validation (must contain letters and numbers)
+const passwordStrengthRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
 
 const createStudentSchema = z.object({
-  firstName: z.string().min(1, 'Имя обязательно'),
-  lastName: z.string().min(1, 'Фамилия обязательна'),
-  phone: z.string().min(10, 'Номер телефона должен содержать минимум 10 символов'),
+  firstName: z.string().min(1, 'Имя обязательно').max(50, 'Имя слишком длинное'),
+  lastName: z.string().min(1, 'Фамилия обязательна').max(50, 'Фамилия слишком длинная'),
+  phone: z.string()
+    .min(10, 'Номер телефона должен содержать минимум 10 символов')
+    .max(15, 'Номер телефона слишком длинный')
+    .regex(phoneRegex, 'Неверный формат номера телефона'),
   email: z.string().email('Неверный формат email').optional().or(z.literal('')),
-  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов').optional(),
+  password: z.string()
+    .min(6, 'Пароль должен содержать минимум 6 символов')
+    .regex(passwordStrengthRegex, 'Пароль должен содержать буквы и цифры')
+    .optional(),
 });
 
 type CreateStudentFormData = z.infer<typeof createStudentSchema>;
@@ -67,6 +80,8 @@ export default function Students() {
     },
   });
 
+  const { showToast } = useToastStore();
+
   const createStudentMutation = useMutation(
     async (data: CreateStudentFormData) => {
       const response = await api.post<ApiResponse<User>>('/students', data);
@@ -77,6 +92,10 @@ export default function Students() {
         queryClient.invalidateQueries('students');
         setIsModalOpen(false);
         reset();
+        showToast('Студент успешно создан', 'success');
+      },
+      onError: (error: ApiError) => {
+        showToast(error.response?.data?.message || 'Ошибка при создании студента', 'error');
       },
     }
   );
@@ -89,6 +108,10 @@ export default function Students() {
       onSuccess: () => {
         queryClient.invalidateQueries('students');
         setDeleteConfirm({ isOpen: false, studentId: null });
+        showToast('Студент успешно удален', 'success');
+      },
+      onError: (error: ApiError) => {
+        showToast(error.response?.data?.message || 'Ошибка при удалении студента', 'error');
       },
     }
   );
@@ -114,7 +137,7 @@ export default function Students() {
             <Download className="h-5 w-5 mr-2" />
             <span>Экспорт</span>
           </button>
-          {isAdmin && (
+          {(isAdmin || user?.role === 'TEACHER') && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="btn-primary inline-flex items-center"
@@ -338,24 +361,27 @@ export default function Students() {
       ) : (
         <>
           {/* Desktop Table View */}
-          <div className="hidden md:block card overflow-hidden">
+          <div className="hidden lg:block card overflow-hidden">
             <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-neutral-200">
               <thead className="bg-neutral-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                     Студент
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                     Телефон
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider hidden xl:table-cell">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                    Создан
+                  </th>
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                     Курсов
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase tracking-wider">
                     Действия
                   </th>
                 </tr>
@@ -363,7 +389,7 @@ export default function Students() {
               <tbody className="bg-white divide-y divide-neutral-200">
                 {students.map((student: User) => (
                   <tr key={student.id} className="hover:bg-neutral-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 xl:px-6 py-4">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-soft">
@@ -374,36 +400,50 @@ export default function Students() {
                           <div className="text-sm font-medium text-neutral-900">
                             {student.firstName} {student.lastName}
                           </div>
+                          <div className="text-xs text-neutral-500 xl:hidden mt-1">{student.phone}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                    <td className="px-4 xl:px-6 py-4 text-sm text-neutral-600 hidden xl:table-cell">
                       {student.phone}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                    <td className="px-4 xl:px-6 py-4 text-sm text-neutral-600 hidden xl:table-cell">
                       {student.email || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                    <td className="px-4 xl:px-6 py-4 text-sm text-neutral-600">
+                      {student.creator ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {student.creator.firstName} {student.creator.lastName}
+                          </span>
+                          <span className="text-xs text-neutral-500">
+                            {student.creator.role === 'TEACHER' ? 'Учитель' : student.creator.role === 'ADMIN' ? 'Администратор' : student.creator.role}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-neutral-400 italic text-xs">Самостоятельная регистрация</span>
+                      )}
+                    </td>
+                    <td className="px-4 xl:px-6 py-4 text-sm text-neutral-600">
                       {student._count?.studentCourses || 0}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 xl:px-6 py-4 text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           to={`/teacher/students/${student.id}`}
-                          className="group inline-flex items-center gap-2 px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
+                          className="group inline-flex items-center gap-1 xl:gap-2 px-2 xl:px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-xs xl:text-sm"
                         >
                           <Eye className="h-4 w-4" />
-                          <span>Просмотр</span>
-                          <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+                          <span className="hidden xl:inline">Просмотр</span>
                         </Link>
                         {isAdmin && (
                           <button
                             onClick={() => setDeleteConfirm({ isOpen: true, studentId: student.id })}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
+                            className="inline-flex items-center gap-1 xl:gap-2 px-2 xl:px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-xs xl:text-sm"
                             title="Удалить студента"
                           >
                             <Trash2 className="h-4 w-4" />
-                            <span>Удалить</span>
+                            <span className="hidden xl:inline">Удалить</span>
                           </button>
                         )}
                       </div>
@@ -413,6 +453,70 @@ export default function Students() {
               </tbody>
             </table>
           </div>
+        </div>
+        
+        {/* Tablet View (md to lg) */}
+        <div className="hidden md:block lg:hidden space-y-4">
+          {students.map((student: User) => (
+            <div key={student.id} className="card p-4 hover:bg-neutral-50 transition-colors">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex-shrink-0 h-12 w-12">
+                    <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center shadow-soft">
+                      <UserIcon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-base font-medium text-neutral-900">
+                      {student.firstName} {student.lastName}
+                    </div>
+                    <div className="text-sm text-neutral-600 mt-1">{student.phone}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-3 text-sm text-neutral-600">
+                <div>
+                  <span className="text-xs text-neutral-500">Email:</span>
+                  <div className="font-medium">{student.email || '-'}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-neutral-500">Курсов:</span>
+                  <div className="font-medium">{student._count?.studentCourses || 0}</div>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-xs text-neutral-500">Создан:</span>
+                  <div className="text-sm">
+                    {student.creator ? (
+                      <span>
+                        <span className="font-medium">{student.creator.firstName} {student.creator.lastName}</span> ({student.creator.role === 'TEACHER' ? 'Учитель' : student.creator.role === 'ADMIN' ? 'Администратор' : student.creator.role})
+                      </span>
+                    ) : (
+                      <span className="text-neutral-400 italic">Самостоятельная регистрация</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Link
+                  to={`/teacher/students/${student.id}`}
+                  className="group inline-flex items-center justify-center gap-2 flex-1 px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>Просмотр</span>
+                </Link>
+                {isAdmin && (
+                  <button
+                    onClick={() => setDeleteConfirm({ isOpen: true, studentId: student.id })}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
+                    title="Удалить студента"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Удалить</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Mobile Card View */}
@@ -434,9 +538,20 @@ export default function Students() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between text-sm text-neutral-600 mb-3">
-                <span>Email: {student.email || '-'}</span>
-                <span>Курсов: {student._count?.studentCourses || 0}</span>
+              <div className="flex flex-col gap-2 text-sm text-neutral-600 mb-3">
+                <div className="flex items-center justify-between">
+                  <span>Email: {student.email || '-'}</span>
+                  <span>Курсов: {student._count?.studentCourses || 0}</span>
+                </div>
+                <div className="text-xs">
+                  {student.creator ? (
+                    <span>
+                      Создан: <span className="font-medium">{student.creator.firstName} {student.creator.lastName}</span> ({student.creator.role === 'TEACHER' ? 'Учитель' : student.creator.role === 'ADMIN' ? 'Администратор' : student.creator.role})
+                    </span>
+                  ) : (
+                    <span className="text-neutral-400 italic">Самостоятельная регистрация</span>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2">
                 <Link

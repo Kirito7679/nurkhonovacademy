@@ -27,9 +27,18 @@ export interface User {
   language?: SupportedLanguage;
   isPaidTeacher?: boolean;
   coins?: number;
+  hasFlashcardsAccess?: boolean;
+  hasIntegrationsAccess?: boolean;
   city?: string | null;
   region?: string | null;
   country?: string | null;
+  createdBy?: string | null;
+  creator?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: Role;
+  } | null;
   createdAt: string;
   updatedAt?: string;
 }

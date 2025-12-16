@@ -5,6 +5,8 @@ import { AppError } from '../utils/errors';
 import { AuthRequest } from '../middleware/auth';
 import { updateStudentSchema, createStudentSchema, resetPasswordSchema } from '../utils/validation';
 import { createNotification } from './notificationController';
+import { getLocationFromRequest } from '../services/geolocationService';
+import { generateSecurePassword } from '../utils/passwordGenerator';
 
 export const createStudent = async (
   req: AuthRequest,
@@ -12,9 +14,9 @@ export const createStudent = async (
   next: NextFunction
 ) => {
   try {
-    // Только админ может создавать студентов
-    if (req.user?.role !== 'ADMIN') {
-      throw new AppError('Только администратор может создавать студентов', 403);
+    // Админ и учителя могут создавать студентов
+    if (req.user?.role !== 'ADMIN' && req.user?.role !== 'TEACHER') {
+      throw new AppError('Только администратор или учитель могут создавать студентов', 403);
     }
 
     const validatedData = createStudentSchema.parse(req.body);
@@ -28,11 +30,15 @@ export const createStudent = async (
       throw new AppError('Пользователь с таким номером телефона уже существует', 400);
     }
 
-    // Generate default password if not provided
-    const password = validatedData.password || '123456';
+    // Generate secure random password if not provided
+    // Security: Never use weak default passwords
+    const password = validatedData.password || generateSecurePassword(12);
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create student
+    // Get user location from IP (for country tracking)
+    const location = await getLocationFromRequest(req);
+
+    // Create student with createdBy field and location
     const student = await prisma.user.create({
       data: {
         firstName: validatedData.firstName,
@@ -41,6 +47,10 @@ export const createStudent = async (
         email: validatedData.email || null,
         password: hashedPassword,
         role: 'STUDENT',
+        createdBy: req.user!.id, // Track who created this student
+        city: location.city || undefined,
+        region: location.region || undefined,
+        country: location.country || undefined,
       },
       select: {
         id: true,
@@ -49,6 +59,15 @@ export const createStudent = async (
         phone: true,
         email: true,
         createdAt: true,
+        createdBy: true,
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
+        },
         _count: {
           select: {
             studentCourses: true,
@@ -80,40 +99,67 @@ export const getAllStudents = async (
       role: 'STUDENT',
     };
 
+    // Build search conditions
+    const searchConditions: any[] = [];
     if (search) {
-      where.OR = [
+      searchConditions.push(
         { firstName: { contains: search as string, mode: 'insensitive' } },
         { lastName: { contains: search as string, mode: 'insensitive' } },
-        { phone: { contains: search as string, mode: 'insensitive' } },
-      ];
+        { phone: { contains: search as string, mode: 'insensitive' } }
+      );
     }
 
-    // For teachers, show only students enrolled in their courses
-    // Optimized: use nested relation filter instead of separate query
+    // For teachers, show students they created OR students enrolled in their courses
     if (userRole === 'TEACHER') {
-      where.studentCourses = {
-        some: {
-          course: {
-            teacherId: userId,
+      const teacherConditions: any[] = [
+        { createdBy: userId }, // Students created by this teacher
+        {
+          studentCourses: {
+            some: {
+              course: {
+                teacherId: userId,
+              },
+            },
           },
         },
-      };
-    }
+      ];
 
-    if (courseId) {
-      // Verify course access for teachers and filter students
-      if (userRole === 'TEACHER') {
-        // Use nested relation to verify access and filter in one query
-        where.studentCourses = {
-          some: {
-            courseId: courseId as string,
-            course: {
-              teacherId: userId, // Verify teacher owns the course
+      // If courseId is specified, filter by course and verify teacher owns it
+      if (courseId) {
+        teacherConditions.push({
+          studentCourses: {
+            some: {
+              courseId: courseId as string,
+              course: {
+                teacherId: userId, // Verify teacher owns the course
+              },
+              ...(status && { status: status as string }),
             },
-            ...(status && { status: status as string }),
           },
-        };
+        });
+      }
+
+      // Combine search and teacher conditions
+      if (searchConditions.length > 0) {
+        where.AND = [
+          {
+            OR: teacherConditions,
+          },
+          {
+            OR: searchConditions,
+          },
+        ];
       } else {
+        where.OR = teacherConditions;
+      }
+    } else {
+      // For admin, apply search if provided
+      if (searchConditions.length > 0) {
+        where.OR = searchConditions;
+      }
+
+      // Filter by courseId if provided (for admin)
+      if (courseId) {
         where.studentCourses = {
           some: {
             courseId: courseId as string,
@@ -132,6 +178,15 @@ export const getAllStudents = async (
         phone: true,
         email: true,
         createdAt: true,
+        createdBy: true,
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
+        },
         studentCourses: {
           include: {
             course: {
@@ -179,6 +234,8 @@ export const getStudentById = async (
         lastName: true,
         phone: true,
         email: true,
+        hasFlashcardsAccess: true,
+        hasIntegrationsAccess: true,
         createdAt: true,
         updatedAt: true,
         studentCourses: {
@@ -248,16 +305,16 @@ export const updateStudent = async (
       throw new AppError('Студент не найден', 404);
     }
 
-    // If admin is trying to update, only allow password reset (which is handled by resetStudentPassword endpoint)
-    // Admins should not be able to change student profile data
-    if (req.user?.role === 'ADMIN' || req.user?.role === 'TEACHER') {
-      throw new AppError('Администраторы и преподаватели могут изменять только пароль студента. Для изменения профиля студент должен войти в свой аккаунт.', 403);
+    // Check permissions: ADMIN can update any student, TEACHER cannot update student profile, STUDENT can only update their own
+    if (req.user?.role === 'TEACHER') {
+      throw new AppError('Учителя могут изменять только пароль студента. Для изменения профиля используйте функцию сброса пароля.', 403);
     }
 
-    // Only students can update their own profile
-    if (req.user?.id !== id) {
+    if (req.user?.role === 'STUDENT' && req.user?.id !== id) {
       throw new AppError('Вы можете изменять только свой профиль', 403);
     }
+
+    // ADMIN can update any student profile
 
     // Check if phone is being changed and if it's already taken
     if (validatedData.phone && validatedData.phone !== student.phone) {
@@ -384,6 +441,13 @@ export const approveCourseAccess = async (
 
     const course = await prisma.course.findUnique({
       where: { id: courseId },
+      select: {
+        id: true,
+        title: true,
+        teacherId: true,
+        subscriptionType: true,
+        trialPeriodDays: true,
+      },
     });
 
     if (!course) {
@@ -408,52 +472,115 @@ export const approveCourseAccess = async (
       throw new AppError('Запрос на доступ не найден', 404);
     }
 
-    const updatedStudentCourse = await prisma.studentCourse.update({
-      where: {
-        studentId_courseId: {
-          studentId: id,
-          courseId,
-        },
-      },
-      data: {
-        status: action === 'approve' ? 'APPROVED' : 'REJECTED',
-        approvedAt: action === 'approve' ? new Date() : null,
-        approvedBy: action === 'approve' ? req.user!.id : null,
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+    // Use transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Calculate access dates based on subscription type
+      let accessStartDate: Date | null = null;
+      let accessEndDate: Date | null = null;
+
+      if (action === 'approve') {
+        accessStartDate = new Date(); // Start from now
+
+        // Set end date based on subscription type
+        if (course.subscriptionType === 'TRIAL' && course.trialPeriodDays) {
+          // Trial period - limited days
+          accessEndDate = new Date();
+          accessEndDate.setDate(accessEndDate.getDate() + course.trialPeriodDays);
+        } else if (course.subscriptionType === 'PAID') {
+          // Paid subscription - no end date (unlimited access)
+          accessEndDate = null;
+        } else if (course.subscriptionType === 'FREE') {
+          // Free course - unlimited access
+          accessEndDate = null;
+        }
+        // If subscriptionType is null or undefined, leave accessEndDate as null (unlimited)
+
+        // Validate dates
+        if (accessEndDate && accessStartDate && accessEndDate < accessStartDate) {
+          throw new AppError('Дата окончания доступа не может быть раньше даты начала', 400);
+        }
+      }
+
+      const updatedStudentCourse = await tx.studentCourse.update({
+        where: {
+          studentId_courseId: {
+            studentId: id,
+            courseId,
           },
         },
-        course: {
-          select: {
-            id: true,
-            title: true,
+        data: {
+          status: action === 'approve' ? 'APPROVED' : 'REJECTED',
+          approvedAt: action === 'approve' ? new Date() : null,
+          approvedBy: action === 'approve' ? req.user!.id : null,
+          accessStartDate: action === 'approve' ? accessStartDate : null,
+          accessEndDate: action === 'approve' ? accessEndDate : null,
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+          course: {
+            select: {
+              id: true,
+              title: true,
+            },
           },
         },
-      },
+      });
+
+      // Create notification for student (inside transaction)
+      const notificationType = action === 'approve' ? 'COURSE_APPROVED' : 'COURSE_REJECTED';
+      const notificationTitle = action === 'approve' 
+        ? 'Доступ к курсу одобрен' 
+        : 'Запрос на доступ отклонен';
+      const notificationMessage = action === 'approve'
+        ? `Вам предоставлен доступ к курсу "${course.title}"`
+        : `Ваш запрос на доступ к курсу "${course.title}" был отклонен`;
+      
+      await createNotification(
+        id,
+        notificationType,
+        notificationTitle,
+        notificationMessage,
+        `/courses/${courseId}`,
+        tx // Pass transaction client
+      );
+
+      return updatedStudentCourse;
     });
 
-    // Create notification for student
-    const notificationType = action === 'approve' ? 'COURSE_APPROVED' : 'COURSE_REJECTED';
-    const notificationTitle = action === 'approve' 
-      ? 'Доступ к курсу одобрен' 
-      : 'Запрос на доступ отклонен';
-    const notificationMessage = action === 'approve'
-      ? `Вам предоставлен доступ к курсу "${course.title}"`
-      : `Ваш запрос на доступ к курсу "${course.title}" был отклонен`;
+    const updatedStudentCourse = result;
     
-    await createNotification(
-      id,
-      notificationType,
-      notificationTitle,
-      notificationMessage,
-      `/courses/${courseId}`
-    );
+    // Emit socket notification after transaction commits
+    if (updatedStudentCourse) {
+      const notificationType = action === 'approve' ? 'COURSE_APPROVED' : 'COURSE_REJECTED';
+      const notificationTitle = action === 'approve' 
+        ? 'Доступ к курсу одобрен' 
+        : 'Запрос на доступ отклонен';
+      const notificationMessage = action === 'approve'
+        ? `Вам предоставлен доступ к курсу "${course.title}"`
+        : `Ваш запрос на доступ к курсу "${course.title}" был отклонен`;
+      
+      // Re-fetch notification to emit via socket
+      const notification = await prisma.notification.findFirst({
+        where: {
+          userId: id,
+          type: notificationType,
+          title: notificationTitle,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      
+      if (notification) {
+        const { emitNotification } = await import('../services/socketService');
+        emitNotification(id, notification);
+      }
+    }
 
     res.json({
       success: true,

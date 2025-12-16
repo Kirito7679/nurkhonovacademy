@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 export default function MobileBottomNav() {
   const location = useLocation();
   const { user } = useAuthStore();
-  const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
+  const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN' || user?.role === 'CURATOR';
   const isStudent = user?.role === 'STUDENT';
 
   if (!isTeacher && !isStudent) {

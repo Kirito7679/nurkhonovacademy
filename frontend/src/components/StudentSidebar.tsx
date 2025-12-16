@@ -1,19 +1,44 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, BookOpen, Settings, Instagram, Youtube, Send, MessageSquare, SquareStack, Link as LinkIcon } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 export default function StudentSidebar() {
   const { t } = useTranslation();
   const location = useLocation();
+  const { user } = useAuthStore();
 
-  const menuItems = [
+  // Базовые пункты меню, доступные всем студентам
+  const baseMenuItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: t('dashboard.title') },
     { path: '/courses', icon: BookOpen, label: t('courses.title') },
-    { path: '/flashcards', icon: SquareStack, label: t('flashcards.title') },
-    { path: '/integrations', icon: LinkIcon, label: t('integrations.title') },
     { path: '/chat', icon: MessageSquare, label: t('chat.withTeacher') },
     { path: '/profile', icon: Settings, label: t('profile.settings') },
   ];
+
+  // Пункты меню, требующие специального доступа
+  // Для студентов проверяем разрешения, для учителей/админов всегда доступны
+  const isTeacherOrAdmin = user?.role === 'TEACHER' || user?.role === 'ADMIN' || user?.role === 'MODERATOR' || user?.role === 'CURATOR';
+  const conditionalMenuItems = [
+    { 
+      path: '/flashcards', 
+      icon: SquareStack, 
+      label: t('flashcards.title'), 
+      requiresAccess: isTeacherOrAdmin || user?.hasFlashcardsAccess 
+    },
+    { 
+      path: '/integrations', 
+      icon: LinkIcon, 
+      label: t('integrations.title'), 
+      requiresAccess: isTeacherOrAdmin || user?.hasIntegrationsAccess 
+    },
+  ];
+
+  // Фильтруем условные пункты меню на основе доступа
+  const availableConditionalItems = conditionalMenuItems.filter(item => item.requiresAccess);
+
+  // Объединяем все доступные пункты меню
+  const menuItems = [...baseMenuItems, ...availableConditionalItems];
 
   const socialLinks = [
     { 

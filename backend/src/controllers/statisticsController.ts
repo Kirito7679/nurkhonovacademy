@@ -218,18 +218,53 @@ export const getNewUsersGrowth = async (
   try {
     const { days = 30 } = req.query;
     const daysCount = parseInt(days as string, 10) || 30;
+    const userRole = req.user!.role;
+    const userId = req.user!.id;
     
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysCount);
     
+    // For teachers, only show students from their courses
+    let whereClause: any = {
+      createdAt: {
+        gte: startDate,
+      },
+      role: 'STUDENT',
+    };
+
+    if (userRole === 'TEACHER') {
+      // Get students from teacher's courses
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId: userId },
+        select: { id: true },
+      });
+      
+      if (teacherCourses.length === 0) {
+        // Teacher has no courses, return empty data
+        const dateMap = new Map<string, number>();
+        const currentDate = new Date(startDate);
+        while (currentDate <= new Date()) {
+          const dateKey = currentDate.toISOString().split('T')[0];
+          dateMap.set(dateKey, 0);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        const data = Array.from(dateMap.entries())
+          .map(([date, count]) => ({ date, count }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        return res.json({ success: true, data });
+      }
+      
+      const courseIds = teacherCourses.map(c => c.id);
+      whereClause.studentCourses = {
+        some: {
+          courseId: { in: courseIds },
+        },
+      };
+    }
+    
     // Get users created in the period, grouped by date
     const users = await prisma.user.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-        role: 'STUDENT',
-      },
+      where: whereClause,
       select: {
         createdAt: true,
       },
@@ -279,11 +314,65 @@ export const getDeviceStatistics = async (
   next: NextFunction
 ) => {
   try {
+    const userRole = req.user!.role;
+    const userId = req.user!.id;
+
+    // For teachers, only show statistics for their students
+    let whereClause: any = {
+      action: 'LOGIN',
+    };
+
+    if (userRole === 'TEACHER') {
+      // Get students from teacher's courses
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId: userId },
+        select: { id: true },
+      });
+      
+      if (teacherCourses.length === 0) {
+        // Teacher has no courses, return empty data
+        return res.json({
+          success: true,
+          data: [
+            { name: 'Десктоп', value: 0 },
+            { name: 'Мобильные', value: 0 },
+            { name: 'Планшеты', value: 0 },
+            { name: 'Неизвестно', value: 0 },
+          ],
+        });
+      }
+      
+      const courseIds = teacherCourses.map(c => c.id);
+      
+      const studentIds = await prisma.studentCourse.findMany({
+        where: {
+          courseId: { in: courseIds },
+          status: 'APPROVED',
+        },
+        select: { studentId: true },
+        distinct: ['studentId'],
+      });
+      
+      if (studentIds.length === 0) {
+        // Teacher has no students, return empty data
+        return res.json({
+          success: true,
+          data: [
+            { name: 'Десктоп', value: 0 },
+            { name: 'Мобильные', value: 0 },
+            { name: 'Планшеты', value: 0 },
+            { name: 'Неизвестно', value: 0 },
+          ],
+        });
+      }
+      
+      const studentIdList = studentIds.map(sc => sc.studentId);
+      whereClause.userId = { in: studentIdList };
+    }
+
     // Get device info from activity logs
     const activityLogs = await prisma.activityLog.findMany({
-      where: {
-        action: 'LOGIN',
-      },
+      where: whereClause,
       select: {
         userAgent: true,
       },
@@ -314,9 +403,7 @@ export const getDeviceStatistics = async (
     // Also count by unique users per device type
     const usersByDevice = await prisma.activityLog.groupBy({
       by: ['userAgent'],
-      where: {
-        action: 'LOGIN',
-      },
+      where: whereClause,
       _count: {
         userId: true,
       },
@@ -366,24 +453,68 @@ export const getActiveStudentsStatistics = async (
   try {
     const { days = 30 } = req.query;
     const daysCount = parseInt(days as string, 10) || 30;
+    const userRole = req.user!.role;
+    const userId = req.user!.id;
     
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysCount);
     
+    // For teachers, only show students from their courses
+    let studentWhereClause: any = {
+      role: 'STUDENT',
+    };
+
+    if (userRole === 'TEACHER') {
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId: userId },
+        select: { id: true },
+      });
+      
+      if (teacherCourses.length === 0) {
+        // Teacher has no courses, return empty data
+        return res.json({
+          success: true,
+          data: [
+            { name: 'Активные', value: 0 },
+            { name: 'Неактивные', value: 0 },
+          ],
+        });
+      }
+      
+      const courseIds = teacherCourses.map(c => c.id);
+      studentWhereClause.studentCourses = {
+        some: {
+          courseId: { in: courseIds },
+        },
+      };
+    }
+    
     // Get all students
     const allStudents = await prisma.user.findMany({
-      where: {
-        role: 'STUDENT',
-      },
+      where: studentWhereClause,
       select: {
         id: true,
       },
     });
+
+    if (allStudents.length === 0) {
+      // No students, return empty data
+      return res.json({
+        success: true,
+        data: [
+          { name: 'Активные', value: 0 },
+          { name: 'Неактивные', value: 0 },
+        ],
+      });
+    }
+
+    const studentIdList = allStudents.map(s => s.id);
     
     // Get students who logged in within the period
     const activeStudentIds = await prisma.activityLog.findMany({
       where: {
         action: 'LOGIN',
+        userId: { in: studentIdList },
         createdAt: {
           gte: cutoffDate,
         },
@@ -407,6 +538,264 @@ export const getActiveStudentsStatistics = async (
     });
   } catch (error: any) {
     next(new AppError(`Ошибка при получении статистики активности студентов: ${error?.message || 'Неизвестная ошибка'}`, 500));
+  }
+};
+
+// Get location statistics (logins and registrations by country/region)
+export const getLocationStatistics = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { type = 'country', action = 'all' } = req.query; // type: 'country' | 'region', action: 'LOGIN' | 'CREATE' | 'all'
+    const userRole = req.user!.role;
+    const userId = req.user!.id;
+
+    let whereClause: any = {};
+    
+    if (action !== 'all') {
+      if (action === 'LOGIN') {
+        whereClause.action = 'LOGIN';
+      } else if (action === 'REGISTER' || action === 'CREATE') {
+        whereClause.action = 'CREATE';
+        whereClause.entityType = 'USER';
+      }
+    }
+
+    // For teachers, only show statistics for their students
+    if (userRole === 'TEACHER') {
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId: userId },
+        select: { id: true },
+      });
+      
+      if (teacherCourses.length === 0) {
+        // Teacher has no courses, return empty data
+        return res.json({
+          success: true,
+          data: [],
+        });
+      }
+      
+      const courseIds = teacherCourses.map(c => c.id);
+      
+      const studentIds = await prisma.studentCourse.findMany({
+        where: {
+          courseId: { in: courseIds },
+          status: 'APPROVED',
+        },
+        select: { studentId: true },
+        distinct: ['studentId'],
+      });
+      
+      if (studentIds.length === 0) {
+        // Teacher has no students, return empty data
+        return res.json({
+          success: true,
+          data: [],
+        });
+      }
+      
+      const studentIdList = studentIds.map(sc => sc.studentId);
+      whereClause.userId = { in: studentIdList };
+    }
+
+    if (type === 'country') {
+      const countryStats = await prisma.activityLog.groupBy({
+        by: ['country'],
+        where: {
+          ...whereClause,
+          country: { not: null },
+        },
+        _count: {
+          id: true,
+        },
+        orderBy: {
+          _count: {
+            id: 'desc',
+          },
+        },
+      });
+
+      const data = countryStats.map((stat) => ({
+        name: stat.country || 'Неизвестно',
+        value: stat._count.id,
+      }));
+
+      res.json({
+        success: true,
+        data,
+      });
+    } else if (type === 'region') {
+      const regionStats = await prisma.activityLog.groupBy({
+        by: ['region', 'country'],
+        where: {
+          ...whereClause,
+          region: { not: null },
+        },
+        _count: {
+          id: true,
+        },
+        orderBy: {
+          _count: {
+            id: 'desc',
+          },
+        },
+      });
+
+      const data = regionStats.map((stat) => ({
+        name: stat.region || 'Неизвестно',
+        country: stat.country || 'Неизвестно',
+        value: stat._count.id,
+      }));
+
+      res.json({
+        success: true,
+        data,
+      });
+    } else {
+      throw new AppError('Неверный тип статистики. Используйте "country" или "region"', 400);
+    }
+  } catch (error: any) {
+    next(new AppError(`Ошибка при получении статистики по локациям: ${error?.message || 'Неизвестная ошибка'}`, 500));
+  }
+};
+
+// Get students statistics by country (for world map)
+export const getStudentsByCountry = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userRole = req.user!.role;
+    const userId = req.user!.id;
+
+    // For teachers, only show students from their courses
+    let whereClause: any = {
+      role: 'STUDENT',
+      country: { not: null },
+    };
+
+    if (userRole === 'TEACHER') {
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId: userId },
+        select: { id: true },
+      });
+      
+      if (teacherCourses.length === 0) {
+        // Teacher has no courses, return empty data
+        return res.json({
+          success: true,
+          data: [],
+        });
+      }
+      
+      const courseIds = teacherCourses.map(c => c.id);
+      whereClause.studentCourses = {
+        some: {
+          courseId: { in: courseIds },
+        },
+      };
+    }
+
+    // Get all students grouped by country
+    const studentsByCountry = await prisma.user.groupBy({
+      by: ['country'],
+      where: whereClause,
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        _count: {
+          id: 'desc',
+        },
+      },
+    });
+
+    // Map country names to ISO codes for map visualization
+    // Common country name mappings
+    const countryNameToCode: Record<string, string> = {
+      'Uzbekistan': 'UZ',
+      'Узбекистан': 'UZ',
+      'Kazakhstan': 'KZ',
+      'Казахстан': 'KZ',
+      'Russia': 'RU',
+      'Россия': 'RU',
+      'Kyrgyzstan': 'KG',
+      'Кыргызстан': 'KG',
+      'Tajikistan': 'TJ',
+      'Таджикистан': 'TJ',
+      'Turkmenistan': 'TM',
+      'Туркменистан': 'TM',
+      'United States': 'US',
+      'США': 'US',
+      'United Kingdom': 'GB',
+      'Великобритания': 'GB',
+      'Germany': 'DE',
+      'Германия': 'DE',
+      'France': 'FR',
+      'Франция': 'FR',
+      'Turkey': 'TR',
+      'Турция': 'TR',
+      'China': 'CN',
+      'Китай': 'CN',
+      'India': 'IN',
+      'Индия': 'IN',
+      'South Korea': 'KR',
+      'Южная Корея': 'KR',
+      'Japan': 'JP',
+      'Япония': 'JP',
+    };
+
+    const data = studentsByCountry.map((stat) => {
+      const countryName = stat.country || 'Unknown';
+      // Try to find country code in mapping (case-insensitive)
+      let countryCode: string = countryNameToCode[countryName] || '';
+      
+      // If not found, try case-insensitive search
+      if (!countryCode) {
+        const normalizedName = countryName.toLowerCase().trim();
+        const foundEntry = Object.entries(countryNameToCode).find(
+          ([key]) => key.toLowerCase() === normalizedName
+        );
+        countryCode = foundEntry ? foundEntry[1] : '';
+      }
+      
+      // If still not found, try to extract from name or use first 2 letters
+      if (!countryCode) {
+        // Try common patterns
+        if (countryName.toLowerCase().includes('uzbek')) countryCode = 'UZ';
+        else if (countryName.toLowerCase().includes('kazakh')) countryCode = 'KZ';
+        else if (countryName.toLowerCase().includes('russia') || countryName.toLowerCase().includes('россия')) countryCode = 'RU';
+        else if (countryName.toLowerCase().includes('kyrgyz') || countryName.toLowerCase().includes('кыргыз')) countryCode = 'KG';
+        else if (countryName.toLowerCase().includes('tajik') || countryName.toLowerCase().includes('таджик')) countryCode = 'TJ';
+        else if (countryName.toLowerCase().includes('turkmen') || countryName.toLowerCase().includes('туркмен')) countryCode = 'TM';
+        else {
+          // Fallback: use first 2 uppercase letters
+          countryCode = countryName.length >= 2 ? countryName.substring(0, 2).toUpperCase() : 'XX';
+        }
+      }
+      
+      // Ensure countryCode is never empty
+      if (!countryCode) {
+        countryCode = 'XX';
+      }
+      
+      return {
+        name: countryName,
+        code: countryCode,
+        value: stat._count.id,
+      };
+    });
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    next(new AppError(`Ошибка при получении статистики студентов по странам: ${error?.message || 'Неизвестная ошибка'}`, 500));
   }
 };
 

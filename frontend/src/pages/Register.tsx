@@ -9,11 +9,22 @@ import api from '../services/api';
 import { ApiResponse, User, ApiError } from '../types';
 import Logo from '../components/Logo';
 
+// Phone validation regex for Uzbekistan format: +998XXXXXXXXX or 998XXXXXXXXX
+const phoneRegex = /^(\+?998)?[0-9]{9}$/;
+
+// Password strength validation (must contain letters and numbers)
+const passwordStrengthRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+
 const registerSchema = z.object({
-  firstName: z.string().min(1, 'Имя обязательно'),
-  lastName: z.string().min(1, 'Фамилия обязательна'),
-  phone: z.string().min(10, 'Номер телефона должен содержать минимум 10 символов'),
-  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
+  firstName: z.string().min(1, 'Имя обязательно').max(50, 'Имя слишком длинное'),
+  lastName: z.string().min(1, 'Фамилия обязательна').max(50, 'Фамилия слишком длинная'),
+  phone: z.string()
+    .min(10, 'Номер телефона должен содержать минимум 10 символов')
+    .max(15, 'Номер телефона слишком длинный')
+    .regex(phoneRegex, 'Неверный формат номера телефона. Используйте формат: +998XXXXXXXXX или 998XXXXXXXXX'),
+  password: z.string()
+    .min(6, 'Пароль должен содержать минимум 6 символов')
+    .regex(passwordStrengthRegex, 'Пароль должен содержать буквы и цифры'),
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -46,7 +57,14 @@ export default function Register() {
         navigate('/dashboard');
       }
     } catch (err: ApiError) {
-      setError(err.response?.data?.message || t('errors.somethingWentWrong'));
+      // Handle different error types
+      if ((err as any).isNetworkError) {
+        setError('Ошибка сети. Проверьте подключение к интернету и попробуйте снова.');
+      } else if ((err as any).isTimeout) {
+        setError('Превышено время ожидания. Попробуйте снова.');
+      } else {
+        setError(err.response?.data?.message || t('errors.somethingWentWrong'));
+      }
     } finally {
       setLoading(false);
     }
@@ -84,12 +102,18 @@ export default function Register() {
                 </label>
                 <input
                   {...register('firstName')}
+                  id="firstName"
                   type="text"
+                  autoComplete="given-name"
                   className="input-field"
                   placeholder={t('auth.firstName')}
+                  aria-invalid={errors.firstName ? 'true' : 'false'}
+                  aria-describedby={errors.firstName ? 'firstName-error' : undefined}
                 />
                 {errors.firstName && (
-                  <p className="mt-1 text-sm text-red-600 font-medium">{errors.firstName.message}</p>
+                  <p id="firstName-error" className="mt-1 text-sm text-red-600 font-medium" role="alert">
+                    {errors.firstName.message}
+                  </p>
                 )}
               </div>
 
@@ -99,12 +123,18 @@ export default function Register() {
                 </label>
                 <input
                   {...register('lastName')}
+                  id="lastName"
                   type="text"
+                  autoComplete="family-name"
                   className="input-field"
                   placeholder={t('auth.lastName')}
+                  aria-invalid={errors.lastName ? 'true' : 'false'}
+                  aria-describedby={errors.lastName ? 'lastName-error' : undefined}
                 />
                 {errors.lastName && (
-                  <p className="mt-1 text-sm text-red-600 font-medium">{errors.lastName.message}</p>
+                  <p id="lastName-error" className="mt-1 text-sm text-red-600 font-medium" role="alert">
+                    {errors.lastName.message}
+                  </p>
                 )}
               </div>
 
@@ -114,13 +144,18 @@ export default function Register() {
                 </label>
                 <input
                   {...register('phone')}
+                  id="phone"
                   type="text"
                   autoComplete="tel"
                   className="input-field"
                   placeholder="+998901234567"
+                  aria-invalid={errors.phone ? 'true' : 'false'}
+                  aria-describedby={errors.phone ? 'phone-error' : undefined}
                 />
                 {errors.phone && (
-                  <p className="mt-1 text-sm text-red-600 font-medium">{errors.phone.message}</p>
+                  <p id="phone-error" className="mt-1 text-sm text-red-600 font-medium" role="alert">
+                    {errors.phone.message}
+                  </p>
                 )}
               </div>
 
@@ -130,13 +165,18 @@ export default function Register() {
                 </label>
                 <input
                   {...register('password')}
+                  id="password"
                   type="password"
                   autoComplete="new-password"
                   className="input-field"
                   placeholder={t('auth.password')}
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
                 />
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600 font-medium">{errors.password.message}</p>
+                  <p id="password-error" className="mt-1 text-sm text-red-600 font-medium" role="alert">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
             </div>

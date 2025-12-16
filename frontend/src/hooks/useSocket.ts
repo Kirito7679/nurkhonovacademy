@@ -44,9 +44,11 @@ export const useSocket = () => {
     socketRef.current = socket;
 
     // Listen for new notifications
-    socket.on('new-notification', () => {
-      // Invalidate notifications query to refetch
+    socket.on('new-notification', (notification) => {
+      // Immediately invalidate and refetch notifications
       queryClient.invalidateQueries('notifications');
+      // Also refetch to get updated unread count
+      queryClient.refetchQueries('notifications');
     });
 
     socket.on('connect', () => {

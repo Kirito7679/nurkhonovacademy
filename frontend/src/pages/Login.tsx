@@ -10,8 +10,13 @@ import api from '../services/api';
 import { ApiResponse, User, ApiError } from '../types';
 import Logo from '../components/Logo';
 
+// Phone validation regex for Uzbekistan format: +998XXXXXXXXX or 998XXXXXXXXX
+const phoneRegex = /^(\+?998)?[0-9]{9}$/;
+
 const loginSchema = z.object({
-  phone: z.string().min(1, 'Номер телефона обязателен'),
+  phone: z.string()
+    .min(1, 'Номер телефона обязателен')
+    .regex(phoneRegex, 'Неверный формат номера телефона'),
   password: z.string().min(1, 'Пароль обязателен'),
 });
 
@@ -45,15 +50,21 @@ export default function Login() {
         setAuth(user, token);
         
         // Redirect based on role
-        if (user.role === 'TEACHER' || user.role === 'ADMIN') {
+        if (user.role === 'TEACHER' || user.role === 'ADMIN' || user.role === 'CURATOR') {
           navigate('/teacher/dashboard');
         } else {
           navigate('/dashboard');
         }
       }
     } catch (err: ApiError) {
-      if (err.response?.status === 429) {
-        setError('Слишком много попыток входа. Пожалуйста, подождите несколько минут и попробуйте снова.');
+      // Handle different error types
+      if ((err as any).isRateLimit) {
+        const retryAfter = (err as any).retryAfter || 60;
+        setError(`Слишком много попыток входа. Пожалуйста, подождите ${retryAfter} секунд и попробуйте снова.`);
+      } else if ((err as any).isNetworkError) {
+        setError('Ошибка сети. Проверьте подключение к интернету и попробуйте снова.');
+      } else if ((err as any).isTimeout) {
+        setError('Превышено время ожидания. Попробуйте снова.');
       } else {
         setError(err.response?.data?.message || t('errors.somethingWentWrong'));
       }
@@ -99,9 +110,13 @@ export default function Login() {
                   autoComplete="tel"
                   className="input-field"
                   placeholder="+998901234567"
+                  aria-invalid={errors.phone ? 'true' : 'false'}
+                  aria-describedby={errors.phone ? 'phone-error' : undefined}
                 />
                 {errors.phone && (
-                  <p className="mt-1 text-sm text-red-600 font-medium">{errors.phone.message}</p>
+                  <p id="phone-error" className="mt-1 text-sm text-red-600 font-medium" role="alert">
+                    {errors.phone.message}
+                  </p>
                 )}
               </div>
               <div>
@@ -116,12 +131,15 @@ export default function Login() {
                   autoComplete="current-password"
                   className="input-field pr-12"
                   placeholder={t('auth.password')}
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
                 />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors focus:outline-none"
-                    aria-label={showPassword ? t('auth.password') : t('auth.password')}
+                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                    aria-pressed={showPassword}
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -131,7 +149,9 @@ export default function Login() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600 font-medium">{errors.password.message}</p>
+                  <p id="password-error" className="mt-1 text-sm text-red-600 font-medium" role="alert">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
             </div>

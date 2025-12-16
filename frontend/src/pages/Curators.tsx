@@ -5,18 +5,32 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../services/api';
 import { ApiResponse, User, ApiError } from '../types';
-import { Search, User as UserIcon, Plus, X, Users, Trash2 } from 'lucide-react';
+import { Search, User as UserIcon, Plus, X, Users, Trash2, Eye, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
 import { useAuthStore } from '../store/authStore';
 import ConfirmModal from '../components/ConfirmModal';
+import { useToastStore } from '../store/toastStore';
+
+// Phone validation regex for Uzbekistan format: +998XXXXXXXXX or 998XXXXXXXXX
+const phoneRegex = /^(\+?998)?[0-9]{9}$/;
+
+// Password strength validation (must contain letters and numbers)
+const passwordStrengthRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
 
 const createCuratorSchema = z.object({
-  firstName: z.string().min(1, 'Имя обязательно'),
-  lastName: z.string().min(1, 'Фамилия обязательна'),
-  phone: z.string().min(10, 'Номер телефона должен содержать минимум 10 символов'),
+  firstName: z.string().min(1, 'Имя обязательно').max(50, 'Имя слишком длинное'),
+  lastName: z.string().min(1, 'Фамилия обязательна').max(50, 'Фамилия слишком длинная'),
+  phone: z.string()
+    .min(10, 'Номер телефона должен содержать минимум 10 символов')
+    .max(15, 'Номер телефона слишком длинный')
+    .regex(phoneRegex, 'Неверный формат номера телефона'),
   email: z.string().email('Неверный формат email').optional().or(z.literal('')),
-  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов').optional(),
+  password: z.string()
+    .min(6, 'Пароль должен содержать минимум 6 символов')
+    .regex(passwordStrengthRegex, 'Пароль должен содержать буквы и цифры')
+    .optional(),
 });
 
 type CreateCuratorFormData = z.infer<typeof createCuratorSchema>;
@@ -37,7 +51,7 @@ export default function Curators() {
     return (
       <div className="card p-12 text-center">
         <h3 className="text-xl font-semibold text-neutral-700 mb-2">Доступ запрещен</h3>
-        <p className="text-neutral-600">Только администратор может управлять кураторами</p>
+        <p className="text-neutral-600">Только администратор может управлять учителями</p>
       </div>
     );
   }
@@ -69,6 +83,8 @@ export default function Curators() {
     },
   });
 
+  const { showToast } = useToastStore();
+
   const createCuratorMutation = useMutation(
     async (data: CreateCuratorFormData) => {
       const response = await api.post<ApiResponse<User>>('/curators', data);
@@ -79,6 +95,10 @@ export default function Curators() {
         queryClient.invalidateQueries('curators');
         setIsModalOpen(false);
         reset();
+        showToast('Учитель успешно создан', 'success');
+      },
+      onError: (error: ApiError) => {
+        showToast(error.response?.data?.message || 'Ошибка при создании учителя', 'error');
       },
     }
   );
@@ -91,6 +111,10 @@ export default function Curators() {
       onSuccess: () => {
         queryClient.invalidateQueries('curators');
         setDeleteConfirm({ isOpen: false, curatorId: null });
+        showToast('Учитель успешно удален', 'success');
+      },
+      onError: (error: ApiError) => {
+        showToast(error.response?.data?.message || 'Ошибка при удалении учителя', 'error');
       },
     }
   );
@@ -104,10 +128,10 @@ export default function Curators() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-gradient">
-            Кураторы
+            Учителя
           </h1>
           <p className="text-neutral-600 mt-2">
-            Управление кураторами (помощниками студентов)
+            Управление учителями платформы
           </p>
         </div>
         <button
@@ -115,7 +139,7 @@ export default function Curators() {
           className="btn-primary inline-flex items-center"
         >
           <Plus className="h-5 w-5 mr-2" />
-          <span>Создать куратора</span>
+          <span>Создать учителя</span>
         </button>
       </div>
 
@@ -132,7 +156,7 @@ export default function Curators() {
               <div className="bg-white px-6 py-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-gradient">
-                    Создать куратора
+                    Создать учителя
                   </h3>
                   <button
                     onClick={() => setIsModalOpen(false)}
@@ -145,7 +169,7 @@ export default function Curators() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   {createCuratorMutation.error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                      {(createCuratorMutation.error as ApiError)?.response?.data?.message || 'Ошибка при создании куратора'}
+                      {(createCuratorMutation.error as ApiError)?.response?.data?.message || 'Ошибка при создании учителя'}
                     </div>
                   )}
 
@@ -270,7 +294,7 @@ export default function Curators() {
             placeholder="Поиск по имени, фамилии или телефону..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            aria-label="Поиск кураторов"
+            aria-label="Поиск учителей"
             className="input-field pl-10"
           />
         </div>
@@ -317,11 +341,11 @@ export default function Curators() {
         <div className="text-center py-12 animate-fade-scale">
           <Users className="mx-auto h-12 w-12 text-neutral-400 mb-4" />
           <h3 className="text-lg font-medium text-neutral-600 mb-2">
-            {debouncedSearch ? 'Кураторы не найдены' : 'Нет кураторов'}
+            {debouncedSearch ? 'Учителя не найдены' : 'Нет учителей'}
           </h3>
           {!debouncedSearch && (
             <p className="text-sm text-neutral-500 mt-2 mb-6">
-              Создайте первого куратора для помощи студентам
+              Создайте первого учителя для работы на платформе
             </p>
           )}
           {!debouncedSearch && (
@@ -330,31 +354,31 @@ export default function Curators() {
               className="btn-primary inline-flex items-center gap-2"
             >
               <Plus className="h-5 w-5" />
-              Создать куратора
+              Создать учителя
             </button>
           )}
         </div>
       ) : (
         <>
           {/* Desktop Table View */}
-          <div className="hidden md:block card overflow-hidden">
+          <div className="hidden lg:block card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-neutral-200">
                 <thead className="bg-neutral-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                      Куратор
+                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                      Учитель
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                       Телефон
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider hidden xl:table-cell">
                       Email
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                       Дата создания
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase tracking-wider">
                       Действия
                     </th>
                   </tr>
@@ -362,7 +386,7 @@ export default function Curators() {
                 <tbody className="bg-white divide-y divide-neutral-200">
                   {curators.map((curator: User) => (
                     <tr key={curator.id} className="hover:bg-neutral-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 xl:px-6 py-4">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-soft">
@@ -374,32 +398,33 @@ export default function Curators() {
                               {curator.firstName} {curator.lastName}
                             </div>
                             <div className="text-xs text-neutral-500">
-                              Куратор
+                              Учитель
                             </div>
+                            <div className="text-xs text-neutral-500 xl:hidden mt-1">{curator.phone}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                      <td className="px-4 xl:px-6 py-4 text-sm text-neutral-600 hidden xl:table-cell">
                         {curator.phone}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                      <td className="px-4 xl:px-6 py-4 text-sm text-neutral-600 hidden xl:table-cell">
                         {curator.email || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                      <td className="px-4 xl:px-6 py-4 text-sm text-neutral-600">
                         {new Date(curator.createdAt).toLocaleDateString('ru-RU', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-4 xl:px-6 py-4 text-right text-sm font-medium">
                         <button
                           onClick={() => setDeleteConfirm({ isOpen: true, curatorId: curator.id })}
-                          className="inline-flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
-                          title="Удалить куратора"
+                          className="inline-flex items-center gap-1 xl:gap-2 px-2 xl:px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-xs xl:text-sm"
+                          title="Удалить учителя"
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span>Удалить</span>
+                          <span className="hidden xl:inline">Удалить</span>
                         </button>
                       </td>
                     </tr>
@@ -407,6 +432,63 @@ export default function Curators() {
                 </tbody>
               </table>
             </div>
+          </div>
+          
+          {/* Tablet and Mobile View */}
+          <div className="lg:hidden space-y-4">
+            {curators.map((curator: User) => (
+              <div key={curator.id} className="card p-4 hover:bg-neutral-50 transition-colors">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex-shrink-0 h-12 w-12">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-soft">
+                        <Users className="h-6 w-6 text-white" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-base font-medium text-neutral-900">
+                        {curator.firstName} {curator.lastName}
+                      </div>
+                      <div className="text-sm text-neutral-600 mt-1">{curator.phone}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-3 text-sm text-neutral-600">
+                  <div>
+                    <span className="text-xs text-neutral-500">Email:</span>
+                    <div className="font-medium">{curator.email || '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-neutral-500">Дата создания:</span>
+                    <div className="font-medium">
+                      {new Date(curator.createdAt).toLocaleDateString('ru-RU', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    to={`/admin/curators/${curator.id}`}
+                    className="group inline-flex items-center justify-center gap-2 flex-1 px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>Просмотр</span>
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+                  </Link>
+                  <button
+                    onClick={() => setDeleteConfirm({ isOpen: true, curatorId: curator.id })}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
+                    title="Удалить учителя"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Удалить</span>
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Mobile Card View */}
@@ -432,14 +514,24 @@ export default function Curators() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setDeleteConfirm({ isOpen: true, curatorId: curator.id })}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
-                  title="Удалить куратора"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Удалить</span>
-                </button>
+                <div className="flex gap-2 mt-3">
+                  <Link
+                    to={`/admin/curators/${curator.id}`}
+                    className="group inline-flex items-center justify-center gap-2 flex-1 px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>Просмотр</span>
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+                  </Link>
+                  <button
+                    onClick={() => setDeleteConfirm({ isOpen: true, curatorId: curator.id })}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
+                    title="Удалить куратора"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Удалить</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -455,8 +547,8 @@ export default function Curators() {
             deleteCuratorMutation.mutate(deleteConfirm.curatorId);
           }
         }}
-        title="Удаление куратора"
-        message="Вы уверены, что хотите удалить этого куратора? Это действие нельзя отменить."
+        title="Удаление учителя"
+        message="Вы уверены, что хотите удалить этого учителя? Это действие нельзя отменить."
         confirmText={deleteCuratorMutation.isLoading ? 'Удаление...' : 'Удалить'}
         cancelText="Отмена"
         variant="danger"

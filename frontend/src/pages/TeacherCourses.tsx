@@ -105,7 +105,12 @@ export default function TeacherCourses() {
                   <img
                     src={course.thumbnailUrl}
                     alt={course.title}
+                    loading="lazy"
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => {
+                      // Fallback to placeholder if image fails to load
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>

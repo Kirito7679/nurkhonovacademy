@@ -2,8 +2,9 @@ import { useQuery } from 'react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { ApiResponse, ApiError } from '../types';
-import { BookOpen, Users, MessageSquare, TrendingUp, Clock, Award, Download } from 'lucide-react';
+import { BookOpen, Users, MessageSquare, TrendingUp, Clock, Award, Download, Globe } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 
 interface TeacherStatistics {
   overview: {
@@ -83,6 +84,54 @@ export default function TeacherStatistics() {
     {
       staleTime: 2 * 60 * 1000, // 2 minutes
       cacheTime: 5 * 60 * 1000, // 5 minutes
+    }
+  );
+
+  const { data: locationData } = useQuery<ApiResponse<Array<{ name: string; value: number; country?: string }>>>(
+    'locationStatistics',
+    async () => {
+      const response = await api.get<ApiResponse<Array<{ name: string; value: number; country?: string }>>>('/statistics/location-statistics?type=country&action=all');
+      return response.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000,
+      cacheTime: 5 * 60 * 1000,
+    }
+  );
+
+  const { data: loginLocationData } = useQuery<ApiResponse<Array<{ name: string; value: number }>>>(
+    'loginLocationStatistics',
+    async () => {
+      const response = await api.get<ApiResponse<Array<{ name: string; value: number }>>>('/statistics/location-statistics?type=country&action=LOGIN');
+      return response.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000,
+      cacheTime: 5 * 60 * 1000,
+    }
+  );
+
+  const { data: registerLocationData } = useQuery<ApiResponse<Array<{ name: string; value: number }>>>(
+    'registerLocationStatistics',
+    async () => {
+      const response = await api.get<ApiResponse<Array<{ name: string; value: number }>>>('/statistics/location-statistics?type=country&action=CREATE');
+      return response.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000,
+      cacheTime: 5 * 60 * 1000,
+    }
+  );
+
+  const { data: studentsByCountryData } = useQuery<ApiResponse<Array<{ name: string; code: string; value: number }>>>(
+    'studentsByCountry',
+    async () => {
+      const response = await api.get<ApiResponse<Array<{ name: string; code: string; value: number }>>>('/statistics/students-by-country');
+      return response.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000,
+      cacheTime: 5 * 60 * 1000,
     }
   );
 
@@ -402,6 +451,174 @@ export default function TeacherStatistics() {
                   <span className="text-2xl font-bold text-gradient">{item.value}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-neutral-500">
+            Нет данных для отображения
+          </div>
+        )}
+      </div>
+
+      {/* Location Statistics Charts */}
+      <div className="card p-6 animate-fade-scale mb-12" style={{ animationDelay: '1.2s' }}>
+        <h2 className="text-xl md:text-2xl font-bold text-gradient mb-6">
+          Статистика по локациям
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* All Activities by Country */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-neutral-900">Все активности по странам</h3>
+            {locationData?.data && locationData.data.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={locationData.data}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {locationData.data.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={DEVICE_COLORS[index % DEVICE_COLORS.length]} 
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [value, 'Активностей']} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-12 text-neutral-500">
+                Нет данных для отображения
+              </div>
+            )}
+          </div>
+
+          {/* Logins by Country */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-neutral-900">Входы по странам</h3>
+            {loginLocationData?.data && loginLocationData.data.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={loginLocationData.data}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip formatter={(value: number) => [value, 'Входов']} />
+                  <Bar dataKey="value" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-12 text-neutral-500">
+                Нет данных для отображения
+              </div>
+            )}
+          </div>
+
+          {/* Registrations by Country */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-neutral-900">Регистрации по странам</h3>
+            {registerLocationData?.data && registerLocationData.data.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={registerLocationData.data}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip formatter={(value: number) => [value, 'Регистраций']} />
+                  <Bar dataKey="value" fill="#10b981" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-12 text-neutral-500">
+                Нет данных для отображения
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* World Map - Students by Country */}
+      <div className="card p-6 animate-fade-scale mb-12" style={{ animationDelay: '1.3s' }}>
+        <div className="flex items-center gap-3 mb-6">
+          <Globe className="h-6 w-6 text-primary-600" />
+          <h2 className="text-xl md:text-2xl font-bold text-gradient">
+            Распределение студентов по странам
+          </h2>
+        </div>
+        {studentsByCountryData?.data && studentsByCountryData.data.length > 0 ? (
+          <div className="space-y-6">
+            <div className="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+              <ComposableMap
+                projectionConfig={{
+                  scale: 147,
+                  center: [0, 20],
+                }}
+                style={{ width: '100%', height: '500px' }}
+              >
+                <Geographies geography="https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json">
+                  {({ geographies }) =>
+                    geographies.map((geo) => {
+                      const countryData = studentsByCountryData.data.find(
+                        (item) => item.code === geo.properties.ISO_A2 || item.name === geo.properties.NAME
+                      );
+                      const studentCount = countryData?.value || 0;
+                      const fillColor = studentCount > 0 
+                        ? `rgba(59, 130, 246, ${Math.min(0.3 + (studentCount / Math.max(...studentsByCountryData.data.map(d => d.value))) * 0.7, 1)})`
+                        : '#e5e7eb';
+                      
+                      return (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill={fillColor}
+                          stroke="#94a3b8"
+                          strokeWidth={0.5}
+                          style={{
+                            default: { outline: 'none' },
+                            hover: { 
+                              outline: 'none',
+                              fill: studentCount > 0 ? '#3b82f6' : '#cbd5e1',
+                              cursor: 'pointer',
+                            },
+                            pressed: { outline: 'none' },
+                          }}
+                        />
+                      );
+                    })
+                  }
+                </Geographies>
+              </ComposableMap>
+            </div>
+            
+            {/* Country List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {studentsByCountryData.data
+                .sort((a, b) => b.value - a.value)
+                .map((country, index) => (
+                  <div
+                    key={country.code || country.name}
+                    className="flex items-center justify-between p-4 bg-gradient-to-r from-primary-50 to-indigo-50 rounded-lg border border-primary-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-white font-bold shadow-soft">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-neutral-900">{country.name}</div>
+                        <div className="text-xs text-neutral-500">Код: {country.code}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-gradient">{country.value}</div>
+                      <div className="text-xs text-neutral-500">студентов</div>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         ) : (

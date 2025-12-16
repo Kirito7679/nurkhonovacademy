@@ -11,25 +11,30 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  firstName     String
-  lastName      String
-  phone         String   @unique
-  email         String?
-  password      String
-  avatarUrl     String?
-  telegram      String? // Telegram username or link
-  role          String   @default("STUDENT") // STUDENT, TEACHER, ADMIN, MODERATOR, ASSISTANT, CURATOR
-  language      String   @default("ru") // ru, en, uz, kk - язык интерфейса
-  isPaidTeacher Boolean  @default(false) // Оплачена ли регистрация учителя
-  coins         Int      @default(0) // Коины для геймификации
-  city          String? // Город
-  region        String? // Регион
-  country       String? // Страна
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  firstName             String
+  lastName              String
+  phone                 String   @unique
+  email                 String?
+  password              String
+  avatarUrl             String?
+  telegram              String? // Telegram username or link
+  role                  String   @default("STUDENT") // STUDENT, TEACHER, ADMIN, MODERATOR, ASSISTANT, CURATOR
+  language              String   @default("ru") // ru, en, uz, kk - язык интерфейса
+  isPaidTeacher         Boolean  @default(false) // Оплачена ли регистрация учителя
+  coins                 Int      @default(0) // Коины для геймификации
+  hasFlashcardsAccess   Boolean  @default(false) // Доступ к флеш-карточкам (для студентов)
+  hasIntegrationsAccess Boolean  @default(false) // Доступ к внешним интеграциям (для студентов)
+  city                  String? // Город
+  region                String? // Регион
+  country               String? // Страна
+  createdBy             String? // ID пользователя, который создал этого пользователя (для студентов, созданных учителями)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   // Relations
+  creator               User?             @relation("UserCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdUsers          User[]            @relation("UserCreator")
   coursesAsTeacher  Course[]            @relation("CourseTeacher")
   studentCourses    StudentCourse[]
   progress          StudentProgress[]
@@ -54,6 +59,7 @@ model User {
   // Story views
   storyViews StoryView[] @relation("StoryViews")
 
+  @@index([createdBy])
   @@map("users")
 }
 
@@ -325,6 +331,9 @@ model ActivityLog {
   details    String? // JSON string with additional details
   ipAddress  String?
   userAgent  String?
+  city       String? // Город
+  region     String? // Регион
+  country    String? // Страна
   createdAt  DateTime @default(now())
 
   // Relations
@@ -335,6 +344,8 @@ model ActivityLog {
   @@index([entityType])
   @@index([createdAt])
   @@index([userId, createdAt])
+  @@index([country])
+  @@index([region])
   @@map("activity_logs")
 }
 

@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { AppError } from '../utils/errors';
 import { AuthRequest } from '../middleware/auth';
 import { lessonSchema, validateVideoUrl } from '../utils/validation';
+import { checkLessonAccess, canEditCourse } from '../utils/accessControl';
 
 export const getLessonById = async (
   req: AuthRequest,
@@ -34,28 +35,13 @@ export const getLessonById = async (
       throw new AppError('Урок не найден', 404);
     }
 
-    // Check access
+    // Check access using centralized access control
     let hasAccess = false;
     if (req.user?.role === 'STUDENT') {
-      const studentCourse = await prisma.studentCourse.findUnique({
-        where: {
-          studentId_courseId: {
-            studentId: req.user.id,
-            courseId: lesson.courseId,
-          },
-        },
-      });
-      hasAccess = studentCourse?.status === 'APPROVED';
-      
-      // Check if it's a trial lesson
-      const course = await prisma.course.findUnique({
-        where: { id: lesson.courseId },
-      });
-      if (course?.trialLessonId === lesson.id) {
-        hasAccess = true; // Trial lesson is always accessible
-      }
+      const accessInfo = await checkLessonAccess(req.user.id, id);
+      hasAccess = accessInfo.hasAccess;
     } else if (req.user?.role === 'TEACHER' || req.user?.role === 'ADMIN') {
-      hasAccess = lesson.course.teacherId === req.user.id || req.user.role === 'ADMIN';
+      hasAccess = canEditCourse(req.user.id, req.user.role, lesson.course.teacherId);
     }
 
     if (!hasAccess) {
@@ -104,7 +90,7 @@ export const createLesson = async (
       throw new AppError('Курс не найден', 404);
     }
 
-    if (course.teacherId !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (!canEditCourse(req.user!.id, req.user!.role, course.teacherId)) {
       throw new AppError('Недостаточно прав для создания урока в этом курсе', 403);
     }
 
@@ -156,7 +142,7 @@ export const updateLesson = async (
     }
 
     // Check permission
-    if (existingLesson.course.teacherId !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (!canEditCourse(req.user!.id, req.user!.role, existingLesson.course.teacherId)) {
       throw new AppError('Недостаточно прав для редактирования этого урока', 403);
     }
 
@@ -206,7 +192,7 @@ export const deleteLesson = async (
       throw new AppError('Урок не найден', 404);
     }
 
-    if (lesson.course.teacherId !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (!canEditCourse(req.user!.id, req.user!.role, lesson.course.teacherId)) {
       throw new AppError('Недостаточно прав для удаления этого урока', 403);
     }
 
@@ -242,27 +228,13 @@ export const getLessonFiles = async (
       throw new AppError('Урок не найден', 404);
     }
 
-    // Check access
+    // Check access using centralized access control
     let hasAccess = false;
     if (req.user?.role === 'STUDENT') {
-      const studentCourse = await prisma.studentCourse.findUnique({
-        where: {
-          studentId_courseId: {
-            studentId: req.user.id,
-            courseId: lesson.courseId,
-          },
-        },
-      });
-      hasAccess = studentCourse?.status === 'APPROVED';
-      
-      const course = await prisma.course.findUnique({
-        where: { id: lesson.courseId },
-      });
-      if (course?.trialLessonId === lesson.id) {
-        hasAccess = true;
-      }
+      const accessInfo = await checkLessonAccess(req.user.id, id);
+      hasAccess = accessInfo.hasAccess;
     } else if (req.user?.role === 'TEACHER' || req.user?.role === 'ADMIN') {
-      hasAccess = lesson.course.teacherId === req.user.id || req.user.role === 'ADMIN';
+      hasAccess = canEditCourse(req.user.id, req.user.role, lesson.course.teacherId);
     }
 
     if (!hasAccess) {
@@ -300,57 +272,79 @@ export const updateProgress = async (
 
     const lesson = await prisma.lesson.findUnique({
       where: { id },
+      include: {
+        course: {
+          select: {
+            id: true,
+            teacherId: true,
+          },
+        },
+      },
     });
 
     if (!lesson) {
       throw new AppError('Урок не найден', 404);
     }
 
-    // Check if lesson was already completed
-    const existingProgress = await prisma.studentProgress.findUnique({
-      where: {
-        studentId_lessonId: {
-          studentId: req.user!.id,
-          lessonId: id,
-        },
-      },
-    });
+    // Check access before updating progress
+    const accessInfo = await checkLessonAccess(req.user!.id, id);
+    if (!accessInfo.hasAccess) {
+      throw new AppError('У вас нет доступа к этому уроку', 403);
+    }
 
-    const wasCompleted = existingProgress?.completed || false;
-    const isNowCompleted = completed === true;
-
-    const progress = await prisma.studentProgress.upsert({
-      where: {
-        studentId_lessonId: {
-          studentId: req.user!.id,
-          lessonId: id,
-        },
-      },
-      update: {
-        completed: completed !== undefined ? completed : undefined,
-        lastPosition: lastPosition !== undefined ? lastPosition : undefined,
-        watchedAt: completed ? new Date() : undefined,
-      },
-      create: {
-        studentId: req.user!.id,
-        lessonId: id,
-        completed: completed || false,
-        lastPosition: lastPosition || 0,
-        watchedAt: completed ? new Date() : undefined,
-      },
-    });
-
-    // Award coins if lesson is completed for the first time
-    if (isNowCompleted && !wasCompleted) {
-      await prisma.user.update({
-        where: { id: req.user!.id },
-        data: {
-          coins: {
-            increment: 5, // 5 coins for completing a lesson
+    // Use transaction to ensure atomicity and prevent race conditions
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if lesson was already completed (inside transaction)
+      const existingProgress = await tx.studentProgress.findUnique({
+        where: {
+          studentId_lessonId: {
+            studentId: req.user!.id,
+            lessonId: id,
           },
         },
       });
-    }
+
+      const wasCompleted = existingProgress?.completed || false;
+      const isNowCompleted = completed === true;
+
+      // Update or create progress
+      const progress = await tx.studentProgress.upsert({
+        where: {
+          studentId_lessonId: {
+            studentId: req.user!.id,
+            lessonId: id,
+          },
+        },
+        update: {
+          completed: completed !== undefined ? completed : undefined,
+          lastPosition: lastPosition !== undefined ? lastPosition : undefined,
+          watchedAt: completed ? new Date() : undefined,
+        },
+        create: {
+          studentId: req.user!.id,
+          lessonId: id,
+          completed: completed || false,
+          lastPosition: lastPosition || 0,
+          watchedAt: completed ? new Date() : undefined,
+        },
+      });
+
+      // Award coins if lesson is completed for the first time (atomic check)
+      if (isNowCompleted && !wasCompleted) {
+        await tx.user.update({
+          where: { id: req.user!.id },
+          data: {
+            coins: {
+              increment: 5, // 5 coins for completing a lesson
+            },
+          },
+        });
+      }
+
+      return progress;
+    });
+
+    const progress = result;
 
     res.json({
       success: true,

@@ -7,6 +7,8 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 seconds timeout for regular requests
+  timeoutErrorMessage: 'Превышено время ожидания ответа от сервера',
 });
 
 // Request interceptor to add auth token
@@ -31,6 +33,37 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiResponse<unknown>>) => {
+    // Handle network errors (no response from server)
+    if (!error.response) {
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        // Request timeout
+        return Promise.reject({
+          ...error,
+          response: {
+            ...error.response,
+            data: {
+              success: false,
+              message: 'Превышено время ожидания. Проверьте подключение к интернету и попробуйте снова.',
+            },
+          },
+          isTimeout: true,
+        });
+      } else if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+        // Network error (no internet connection)
+        return Promise.reject({
+          ...error,
+          response: {
+            ...error.response,
+            data: {
+              success: false,
+              message: 'Ошибка сети. Проверьте подключение к интернету и попробуйте снова.',
+            },
+          },
+          isNetworkError: true,
+        });
+      }
+    }
+
     // Handle 429 Too Many Requests
     if (error.response?.status === 429) {
       const retryAfter = error.response.headers['retry-after'];
@@ -49,9 +82,17 @@ api.interceptors.response.use(
         ...error,
         retryAfter: retryAfterSeconds,
         isRateLimit: true,
+        response: {
+          ...error.response,
+          data: {
+            success: false,
+            message: `Слишком много запросов. Попробуйте снова через ${retryAfterSeconds} секунд.`,
+          },
+        },
       });
     }
     
+    // Handle 401 Unauthorized (token expired or invalid)
     if (error.response?.status === 401) {
       // Only redirect if not already on login/register page and not during login/register requests
       const currentPath = window.location.pathname;
@@ -65,6 +106,50 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+
+    // Handle 500 Internal Server Error
+    if (error.response?.status === 500) {
+      return Promise.reject({
+        ...error,
+        response: {
+          ...error.response,
+          data: {
+            success: false,
+            message: error.response.data?.message || 'Внутренняя ошибка сервера. Пожалуйста, попробуйте позже.',
+          },
+        },
+      });
+    }
+
+    // Handle 400 Bad Request - provide more specific error messages
+    if (error.response?.status === 400) {
+      const errorMessage = error.response.data?.message || 'Неверный запрос. Проверьте введенные данные.';
+      return Promise.reject({
+        ...error,
+        response: {
+          ...error.response,
+          data: {
+            success: false,
+            message: errorMessage,
+          },
+        },
+      });
+    }
+
+    // For other errors, ensure we have a message
+    if (error.response && !error.response.data?.message) {
+      return Promise.reject({
+        ...error,
+        response: {
+          ...error.response,
+          data: {
+            success: false,
+            message: `Ошибка ${error.response.status}: ${error.response.statusText || 'Неизвестная ошибка'}`,
+          },
+        },
+      });
+    }
+    
     return Promise.reject(error);
   }
 );

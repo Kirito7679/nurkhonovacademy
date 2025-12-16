@@ -583,6 +583,60 @@ export default function LessonForm() {
     const file = e.target.files?.[0];
     if (!file || !lessonId) return;
 
+    // Validate file type on frontend
+    const allowedTypes = [
+      // Documents
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      // Images
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      // Videos
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-ms-wmv',
+      'video/x-flv',
+      'video/mpeg',
+      // Archives
+      'application/zip',
+      'application/x-zip-compressed',
+    ];
+
+    const allowedExtensions = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|jpg|jpeg|png|gif|webp|mp4|webm|ogg|mov|avi|wmv|flv|mpeg|mpg)$/i;
+
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.test(file.name)) {
+      setErrorModal({
+        isOpen: true,
+        title: t('common.error', { defaultValue: 'Ошибка' }),
+        message: 'Неподдерживаемый тип файла. Разрешены: документы (PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX), изображения (JPG, PNG, GIF, WebP), видео (MP4, WebM, MOV, AVI и др.), архивы (ZIP)',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file size (max 100MB)
+    const maxSize = 100 * 1024 * 1024; // 100MB
+    if (file.size > maxSize) {
+      setErrorModal({
+        isOpen: true,
+        title: t('common.error', { defaultValue: 'Ошибка' }),
+        message: `Размер файла не должен превышать ${(maxSize / 1024 / 1024).toFixed(0)} MB. Текущий размер: ${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      });
+      e.target.value = '';
+      return;
+    }
+
     setUploadingFile(true);
     setFileUploadProgress({ fileName: file.name, progress: 0 });
     const formData = new FormData();
@@ -594,6 +648,7 @@ export default function LessonForm() {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 300000, // 5 minutes for large file uploads
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -603,11 +658,26 @@ export default function LessonForm() {
       });
       queryClient.invalidateQueries(['lessonFiles', lessonId]);
       setFileUploadProgress(null);
+      setSuccessModal({
+        isOpen: true,
+        title: t('common.success', { defaultValue: 'Успешно' }),
+        message: 'Файл успешно загружен',
+      });
     } catch (error: ApiError) {
+      let errorMessage = 'Ошибка при загрузке файла';
+      
+      if ((error as any).isNetworkError) {
+        errorMessage = 'Ошибка сети. Проверьте подключение к интернету и попробуйте снова.';
+      } else if ((error as any).isTimeout) {
+        errorMessage = 'Превышено время ожидания. Файл слишком большой или соединение медленное.';
+      } else {
+        errorMessage = error.response?.data?.message || errorMessage;
+      }
+
       setErrorModal({
         isOpen: true,
         title: t('common.error', { defaultValue: 'Ошибка' }),
-        message: error.response?.data?.message || 'Ошибка при загрузке файла',
+        message: errorMessage,
       });
       setFileUploadProgress(null);
     } finally {
@@ -658,6 +728,7 @@ export default function LessonForm() {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 600000, // 10 minutes for large video uploads
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -680,10 +751,20 @@ export default function LessonForm() {
       }
       setVideoUploadProgress(null);
     } catch (error: ApiError) {
+      let errorMessage = 'Ошибка при загрузке видео';
+      
+      if ((error as any).isNetworkError) {
+        errorMessage = 'Ошибка сети. Проверьте подключение к интернету и попробуйте снова.';
+      } else if ((error as any).isTimeout) {
+        errorMessage = 'Превышено время ожидания. Видео слишком большое или соединение медленное. Попробуйте загрузить файл меньшего размера или используйте прямую ссылку на видео.';
+      } else {
+        errorMessage = error.response?.data?.message || errorMessage;
+      }
+
       setErrorModal({
         isOpen: true,
         title: t('common.error', { defaultValue: 'Ошибка' }),
-        message: error.response?.data?.message || 'Ошибка при загрузке видео',
+        message: errorMessage,
       });
       setVideoUploadProgress(null);
     } finally {

@@ -20,7 +20,7 @@ export default function Sidebar() {
     { path: '/teacher/courses', icon: BookOpen, label: t('courses.title') },
     { path: '/teacher/classes', icon: GraduationCap, label: 'Групповые классы' },
     { path: '/teacher/chats', icon: MessageSquare, label: t('chat.withStudent') },
-    { path: '/admin/curators', icon: UserCog, label: 'Кураторы', roles: ['ADMIN'] },
+    { path: '/admin/curators', icon: UserCog, label: 'Учителя', roles: ['ADMIN'] },
     { path: '/teacher/profile', icon: User, label: t('profile.title') },
   ];
 

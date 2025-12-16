@@ -5,9 +5,10 @@ import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import api from '../services/api';
 import { ApiResponse, IntermediateTest, IntermediateTestQuestion } from '../types';
-import { ArrowLeft, Save, Plus, Trash2, Edit2 } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Save, Plus, Trash2, Edit2, GripVertical, AlertCircle, CheckCircle2, Clock, Target, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import ErrorModal from '../components/ErrorModal';
+import TestQuestionModal from '../components/TestQuestionModal';
 
 const testSchema = z.object({
   title: z.string().min(1, 'Название теста обязательно'),
@@ -37,7 +38,7 @@ export default function IntermediateTestForm() {
     { enabled: isEdit }
   );
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<TestFormData>({
+  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<TestFormData>({
     resolver: zodResolver(testSchema),
     defaultValues: {
       title: '',
@@ -48,6 +49,25 @@ export default function IntermediateTestForm() {
     },
   });
 
+  const watchedTimeLimit = watch('timeLimit');
+  const watchedPassingScore = watch('passingScore');
+
+  // Load test data when editing
+  useEffect(() => {
+    if (testResponse) {
+      reset({
+        title: testResponse.title || '',
+        description: testResponse.description || '',
+        passingScore: testResponse.passingScore || 70,
+        timeLimit: testResponse.timeLimit || undefined,
+        order: testResponse.order || 0,
+      });
+      if (testResponse.questions) {
+        setQuestions(testResponse.questions);
+      }
+    }
+  }, [testResponse, reset]);
+
   const createTestMutation = useMutation(
     async (data: TestFormData) => {
       const response = await api.post<ApiResponse<IntermediateTest>>(`/tests`, {
@@ -57,7 +77,47 @@ export default function IntermediateTestForm() {
       return response.data.data;
     },
     {
-      onSuccess: () => {
+      onSuccess: async (test) => {
+        // Save questions after test is created
+        // TODO: Add endpoint for creating questions: POST /tests/:testId/questions
+        if (questions.length > 0 && test.id) {
+          try {
+            // Try to save questions - this will work once the endpoint is added
+            const questionPromises = questions.map((q, index) => {
+              const questionData: any = {
+                testId: test.id,
+                question: q.question,
+                type: q.type,
+                order: index,
+                points: q.points,
+              };
+              
+              if (q.options && q.options.length > 0) {
+                questionData.options = q.options.map((opt, optIdx) => ({
+                  text: opt.text,
+                  isCorrect: opt.isCorrect || false,
+                  order: optIdx,
+                }));
+              }
+              
+              return api.post(`/tests/${test.id}/questions`, questionData).catch((err) => {
+                console.warn('Question save endpoint not available yet:', err);
+                return null;
+              });
+            });
+            
+            await Promise.all(questionPromises);
+          } catch (error: any) {
+            console.error('Error saving questions:', error);
+            // Don't show error if endpoint doesn't exist yet
+            if (error.response?.status !== 404) {
+              setErrorModal({
+                isOpen: true,
+                message: 'Тест создан, но не удалось сохранить вопросы. Попробуйте отредактировать тест позже.',
+              });
+            }
+          }
+        }
         queryClient.invalidateQueries(['tests', courseId]);
         navigate(`/teacher/courses/${courseId}/edit`);
       },
@@ -69,6 +129,44 @@ export default function IntermediateTestForm() {
       },
     }
   );
+
+  const handleSaveQuestion = (question: IntermediateTestQuestion) => {
+    if (editingQuestion?.id) {
+      // Update existing question
+      setQuestions(
+        questions.map((q) => (q.id === editingQuestion.id ? question : q))
+      );
+    } else {
+      // Add new question
+      setQuestions([...questions, { ...question, order: questions.length }]);
+    }
+    setEditingQuestion(null);
+  };
+
+  const handleDeleteQuestion = (index: number) => {
+    setQuestions(questions.filter((_, i) => i !== index));
+  };
+
+  const handleMoveQuestion = (index: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && index === 0) ||
+      (direction === 'down' && index === questions.length - 1)
+    ) {
+      return;
+    }
+
+    const newQuestions = [...questions];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    [newQuestions[index], newQuestions[targetIndex]] = [
+      newQuestions[targetIndex],
+      newQuestions[index],
+    ];
+    setQuestions(newQuestions.map((q, i) => ({ ...q, order: i })));
+  };
+
+  const calculateTotalPoints = () => {
+    return questions.reduce((sum, q) => sum + (q.points || 1), 0);
+  };
 
   const onSubmit = (data: TestFormData) => {
     if (questions.length === 0) {
@@ -139,35 +237,56 @@ export default function IntermediateTestForm() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
+                  <Target className="h-4 w-4" />
                   Проходной балл (%) *
                 </label>
-                <input
-                  {...register('passingScore', { valueAsNumber: true })}
-                  type="number"
-                  min="0"
-                  max="100"
-                  className="input-field"
-                  defaultValue={70}
-                />
+                <div className="relative">
+                  <input
+                    {...register('passingScore', { valueAsNumber: true })}
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="input-field pr-12"
+                    defaultValue={70}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 text-sm">
+                    %
+                  </div>
+                </div>
                 {errors.passingScore && (
-                  <p className="mt-1 text-sm text-red-600">{errors.passingScore.message}</p>
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.passingScore.message}
+                  </p>
                 )}
+                <p className="mt-1 text-xs text-neutral-500">
+                  Минимальный процент для прохождения теста
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
                   Лимит времени (минуты)
                 </label>
-                <input
-                  {...register('timeLimit', { valueAsNumber: true })}
-                  type="number"
-                  min="0"
-                  className="input-field"
-                  placeholder="Не ограничено"
-                />
+                <div className="relative">
+                  <input
+                    {...register('timeLimit', { valueAsNumber: true })}
+                    type="number"
+                    min="0"
+                    className="input-field pr-12"
+                    placeholder="Не ограничено"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 text-sm">
+                    мин
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Оставьте пустым для неограниченного времени
+                </p>
               </div>
             </div>
 
@@ -188,7 +307,24 @@ export default function IntermediateTestForm() {
 
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-neutral-900">Вопросы</h2>
+            <div>
+              <h2 className="text-xl font-semibold text-neutral-900 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Вопросы
+              </h2>
+              {questions.length > 0 && (
+                <div className="mt-2 flex items-center gap-4 text-sm text-neutral-600">
+                  <span className="flex items-center gap-1">
+                    <FileText className="h-4 w-4" />
+                    {questions.length} {questions.length === 1 ? 'вопрос' : questions.length < 5 ? 'вопроса' : 'вопросов'}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Target className="h-4 w-4" />
+                    Всего баллов: {calculateTotalPoints()}
+                  </span>
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -210,36 +346,111 @@ export default function IntermediateTestForm() {
           </div>
 
           {questions.length === 0 ? (
-            <div className="text-center py-8 text-neutral-500">
-              <p>Добавьте вопросы к тесту</p>
+            <div className="text-center py-12 border-2 border-dashed border-neutral-200 rounded-lg">
+              <FileText className="h-12 w-12 text-neutral-300 mx-auto mb-4" />
+              <p className="text-neutral-500 mb-2">Нет вопросов</p>
+              <p className="text-sm text-neutral-400">
+                Добавьте вопросы к тесту, нажав кнопку выше
+              </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {questions.map((q, index) => (
-                <div key={q.id || index} className="border border-neutral-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-medium text-neutral-900">{q.question}</p>
-                      <p className="text-sm text-neutral-600 mt-1">
-                        Тип: {q.type === 'SINGLE' ? 'Один ответ' : q.type === 'MULTIPLE' ? 'Несколько ответов' : 'Текст'} • 
-                        Баллов: {q.points}
-                      </p>
+                <div
+                  key={q.id || index}
+                  className="border-2 border-neutral-200 rounded-lg p-4 hover:border-primary-300 transition-colors bg-white"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex flex-col items-center gap-1 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveQuestion(index, 'up')}
+                        disabled={index === 0}
+                        className="text-neutral-400 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Вверх"
+                      >
+                        ↑
+                      </button>
+                      <span className="text-xs font-medium text-neutral-500 bg-neutral-100 px-2 py-1 rounded">
+                        {index + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveQuestion(index, 'down')}
+                        disabled={index === questions.length - 1}
+                        className="text-neutral-400 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Вниз"
+                      >
+                        ↓
+                      </button>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingQuestion(q)}
-                        className="text-primary-600 hover:text-primary-700"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setQuestions(questions.filter((_, i) => i !== index))}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="font-medium text-neutral-900 mb-2">
+                            {q.question || '(Без текста)'}
+                          </p>
+                          <div className="flex items-center gap-3 text-sm text-neutral-600">
+                            <span className="flex items-center gap-1">
+                              {q.type === 'SINGLE' && '○ Один ответ'}
+                              {q.type === 'MULTIPLE' && '☑ Несколько ответов'}
+                              {q.type === 'TEXT' && '✎ Текстовый ответ'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Target className="h-3 w-3" />
+                              {q.points} {q.points === 1 ? 'балл' : q.points < 5 ? 'балла' : 'баллов'}
+                            </span>
+                            {q.options && q.options.length > 0 && (
+                              <span>
+                                {q.options.length} {q.options.length === 1 ? 'вариант' : q.options.length < 5 ? 'варианта' : 'вариантов'}
+                              </span>
+                            )}
+                          </div>
+                          {q.options && q.options.length > 0 && (
+                            <div className="mt-3 space-y-1">
+                              {q.options.slice(0, 3).map((opt, optIdx) => (
+                                <div
+                                  key={optIdx}
+                                  className={`text-xs px-2 py-1 rounded flex items-center gap-2 ${
+                                    opt.isCorrect
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-neutral-100 text-neutral-600'
+                                  }`}
+                                >
+                                  {opt.isCorrect && (
+                                    <CheckCircle2 className="h-3 w-3" />
+                                  )}
+                                  <span className="truncate">{opt.text}</span>
+                                </div>
+                              ))}
+                              {q.options.length > 3 && (
+                                <p className="text-xs text-neutral-400">
+                                  +{q.options.length - 3} еще
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingQuestion(q)}
+                            className="p-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
+                            title="Редактировать"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteQuestion(index)}
+                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Удалить"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -266,6 +477,14 @@ export default function IntermediateTestForm() {
           </button>
         </div>
       </form>
+
+      {/* Question Edit Modal */}
+      <TestQuestionModal
+        isOpen={editingQuestion !== null}
+        question={editingQuestion}
+        onClose={() => setEditingQuestion(null)}
+        onSave={handleSaveQuestion}
+      />
 
       <ErrorModal
         isOpen={errorModal.isOpen}

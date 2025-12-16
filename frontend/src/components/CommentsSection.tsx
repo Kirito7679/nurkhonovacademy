@@ -182,7 +182,7 @@ export default function CommentsSection({ lessonId }: CommentsSectionProps) {
 
   const canReply = (comment: Comment) => {
     if (!user) return false;
-    return user.role === Role.TEACHER || user.role === Role.ADMIN;
+    return user.role === Role.TEACHER || user.role === Role.ADMIN || user.role === Role.CURATOR;
   };
 
   return (
@@ -250,7 +250,7 @@ export default function CommentsSection({ lessonId }: CommentsSectionProps) {
                     <span className="font-semibold text-neutral-900">
                       {comment.user?.firstName} {comment.user?.lastName}
                     </span>
-                    {(comment.user?.role === Role.TEACHER || comment.user?.role === Role.ADMIN) && (
+                    {(comment.user?.role === Role.TEACHER || comment.user?.role === Role.ADMIN || comment.user?.role === Role.CURATOR) && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 font-medium">
                         Преподаватель
                       </span>
@@ -371,7 +371,7 @@ export default function CommentsSection({ lessonId }: CommentsSectionProps) {
                           <span className="font-semibold text-neutral-900 text-sm">
                             {reply.user?.firstName} {reply.user?.lastName}
                           </span>
-                          {(reply.user?.role === Role.TEACHER || reply.user?.role === Role.ADMIN) && (
+                          {(reply.user?.role === Role.TEACHER || reply.user?.role === Role.ADMIN || reply.user?.role === Role.CURATOR) && (
                             <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 font-medium">
                               Преподаватель
                             </span>

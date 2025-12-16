@@ -60,7 +60,7 @@ export default function PracticeExercises() {
   const exercises = exercisesResponse || [];
   const results = resultsResponse || [];
 
-  const canCreate = user?.role === 'TEACHER' || user?.role === 'ADMIN' || user?.role === 'MODERATOR';
+  const canCreate = user?.role === 'TEACHER' || user?.role === 'ADMIN' || user?.role === 'MODERATOR' || user?.role === 'CURATOR';
 
   if (isLoading) {
     return (

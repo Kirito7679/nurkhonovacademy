@@ -278,14 +278,15 @@ export default function StudentDetails() {
                 <button
                   type="submit"
                   disabled={resetPasswordMutation.isLoading}
-                  className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  aria-busy={resetPasswordMutation.isLoading}
                 >
-                  <Lock className="h-5 w-5 mr-2" />
+                  <Lock className="h-5 w-5" />
                   {resetPasswordMutation.isLoading ? (
-                    <span className="flex items-center gap-2">
+                    <>
                       <span className="animate-spin">⟳</span>
                       <span>Сброс...</span>
-                    </span>
+                    </>
                   ) : (
                     'Сбросить пароль'
                   )}

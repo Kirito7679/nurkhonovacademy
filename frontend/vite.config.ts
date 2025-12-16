@@ -30,12 +30,14 @@ export default defineConfig({
         // Это гарантирует правильный порядок загрузки и отсутствие ошибок useState
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            // ВСЕ vendor библиотеки в один чанк vendor-react
-            // Это предотвращает проблемы с порядком загрузки
-            return 'vendor-react';
+            // ВСЕ vendor библиотеки в один чанк vendor
+            // Это предотвращает проблемы с порядком загрузки и зависимостями
+            return 'vendor';
           }
         },
       },
+      // Убедиться, что зависимости разрешаются правильно
+      preserveEntrySignatures: 'strict',
     },
     // Очищать папку dist перед сборкой
     emptyOutDir: true,
@@ -43,6 +45,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     // Минификация (esbuild быстрее чем terser)
     minify: 'esbuild',
+    // Убедиться, что модули загружаются в правильном порядке
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
+    // Убедиться, что модули загружаются синхронно
+    target: 'esnext',
+    modulePreload: {
+      polyfill: true,
+    },
   },
 })
 

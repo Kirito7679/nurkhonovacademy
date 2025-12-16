@@ -15,7 +15,7 @@ import { upload } from '../controllers/fileController';
 const router = Router();
 
 // Get teacher's chat list (students)
-router.get('/teacher/chats', authenticate, requireRole('TEACHER', 'ADMIN'), getTeacherChats);
+router.get('/teacher/chats', authenticate, requireRole('TEACHER', 'ADMIN', 'CURATOR'), getTeacherChats);
 
 // Get student's teacher (must be before /chat/:userId to avoid route conflict)
 router.get('/student/teacher', authenticate, requireRole('STUDENT'), getStudentTeacher);

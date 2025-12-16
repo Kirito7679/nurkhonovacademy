@@ -36,27 +36,30 @@ const getUserLanguage = () => {
   return null;
 };
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources: {
-      ru: { translation: ru },
-      en: { translation: en },
-      uz: { translation: uz },
-      kk: { translation: kk },
-    },
-    lng: getUserLanguage() || undefined,
-    fallbackLng: 'ru',
-    defaultNS: 'translation',
-    interpolation: {
-      escapeValue: false,
-    },
-    detection: {
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'],
-      lookupLocalStorage: 'i18nextLng',
-    },
-  });
+// Инициализация i18n синхронно, чтобы гарантировать готовность
+if (!i18n.isInitialized) {
+  i18n
+    .use(LanguageDetector)
+    .use(initReactI18next)
+    .init({
+      resources: {
+        ru: { translation: ru },
+        en: { translation: en },
+        uz: { translation: uz },
+        kk: { translation: kk },
+      },
+      lng: getUserLanguage() || undefined,
+      fallbackLng: 'ru',
+      defaultNS: 'translation',
+      interpolation: {
+        escapeValue: false,
+      },
+      detection: {
+        order: ['localStorage', 'navigator'],
+        caches: ['localStorage'],
+        lookupLocalStorage: 'i18nextLng',
+      },
+    });
+}
 
 export default i18n;

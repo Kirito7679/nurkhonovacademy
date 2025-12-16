@@ -63,6 +63,9 @@ export default function NotificationBell() {
     }
   );
 
+  // Use socket hook to listen for real-time notifications
+  useSocket();
+
   const notifications = notificationsResponse?.data?.notifications || [];
   const unreadCount = notificationsResponse?.data?.unreadCount || 0;
   const pagination = notificationsResponse?.data?.pagination;
