@@ -30,25 +30,24 @@ export default defineConfig({
         manualChunks: (id) => {
           // Vendor chunks - более детальное разделение
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            // React должен быть в отдельном чанке и загружаться первым
+            // ВАЖНО: Все что использует React должно быть вместе с React
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router') || 
+                id.includes('react-query') || id.includes('react-hook-form') || 
+                id.includes('react-i18next') || id.includes('react-player') ||
+                id.includes('zustand')) {
               return 'vendor-react';
             }
             if (id.includes('axios') || id.includes('socket.io')) {
               return 'vendor-network';
             }
-            if (id.includes('react-query') || id.includes('zustand')) {
-              return 'vendor-state';
-            }
-            if (id.includes('react-hook-form') || id.includes('zod')) {
+            if (id.includes('zod')) {
               return 'vendor-forms';
             }
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }
-            if (id.includes('react-player')) {
-              return 'vendor-player';
-            }
-            if (id.includes('i18next') || id.includes('react-i18next')) {
+            if (id.includes('i18next')) {
               return 'vendor-i18n';
             }
             if (id.includes('recharts')) {
