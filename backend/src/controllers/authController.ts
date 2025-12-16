@@ -15,6 +15,7 @@ import { upload } from './fileController';
 import { uploadAvatar as uploadAvatarToCloudinary, deleteFromCloudinary, extractPublicId } from '../services/cloudinaryService';
 import { uploadAvatar as uploadAvatarToSupabase, deleteFromSupabase, extractFilePath } from '../services/supabaseStorageService';
 import { deleteFile as deleteLocalFile } from '../services/fileService';
+import { getLocationFromRequest } from '../services/geolocationService';
 import fs from 'fs/promises';
 
 export const register = async (
@@ -37,6 +38,9 @@ export const register = async (
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
+    // Get user location from IP
+    const location = await getLocationFromRequest(req);
+
     // Create user
     const user = await prisma.user.create({
       data: {
@@ -45,6 +49,9 @@ export const register = async (
         phone: validatedData.phone,
         password: hashedPassword,
         role: 'STUDENT',
+        city: location.city || null,
+        region: location.region || null,
+        country: location.country || null,
       },
       select: {
         id: true,

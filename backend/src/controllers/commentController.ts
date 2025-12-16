@@ -247,6 +247,18 @@ export const createComment = async (
       },
     });
 
+    // Award coins for commenting (only for students, only for top-level comments)
+    if (req.user!.role === 'STUDENT' && !validatedData.parentId) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          coins: {
+            increment: 2, // 2 coins for leaving a comment
+          },
+        },
+      });
+    }
+
     // Create notification for teacher if student commented
     if (!validatedData.parentId && req.user!.role === 'STUDENT') {
       // Get student data from database

@@ -306,6 +306,19 @@ export const updateProgress = async (
       throw new AppError('Урок не найден', 404);
     }
 
+    // Check if lesson was already completed
+    const existingProgress = await prisma.studentProgress.findUnique({
+      where: {
+        studentId_lessonId: {
+          studentId: req.user!.id,
+          lessonId: id,
+        },
+      },
+    });
+
+    const wasCompleted = existingProgress?.completed || false;
+    const isNowCompleted = completed === true;
+
     const progress = await prisma.studentProgress.upsert({
       where: {
         studentId_lessonId: {
@@ -326,6 +339,18 @@ export const updateProgress = async (
         watchedAt: completed ? new Date() : undefined,
       },
     });
+
+    // Award coins if lesson is completed for the first time
+    if (isNowCompleted && !wasCompleted) {
+      await prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          coins: {
+            increment: 5, // 5 coins for completing a lesson
+          },
+        },
+      });
+    }
 
     res.json({
       success: true,

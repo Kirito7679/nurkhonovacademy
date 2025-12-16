@@ -115,6 +115,22 @@ export const getAllCourses = async (
         studentCourses.map((sc) => [sc.courseId, sc.status])
       );
 
+      // Get all student courses for subscription check
+      const studentCoursesForSub = await prisma.studentCourse.findMany({
+        where: {
+          studentId: req.user.id,
+          courseId: { in: courses.map(c => c.id) },
+        },
+        select: {
+          courseId: true,
+          enrolledAt: true,
+        },
+      });
+
+      const studentCourseSubMap = new Map(
+        studentCoursesForSub.map(sc => [sc.courseId, sc])
+      );
+
       let coursesWithAccess = courses.map((course) => {
         const studentCourseStatus = studentCourseMap.get(course.id);
         const hasAccess = studentCourseStatus === 'APPROVED';
@@ -122,12 +138,40 @@ export const getAllCourses = async (
         // Check if course has trial lesson
         const hasTrialAccess = !!course.trialLessonId;
 
+        // Check subscription status
+        let subscriptionStatus = null;
+        let trialDaysRemaining = null;
+        if (hasAccess && studentCourseStatus) {
+          const studentCourse = studentCourseSubMap.get(course.id);
+
+          if (studentCourse && course.subscriptionType === 'TRIAL' && course.trialPeriodDays) {
+            const enrolledDate = new Date(studentCourse.enrolledAt);
+            const trialEndDate = new Date(enrolledDate);
+            trialEndDate.setDate(trialEndDate.getDate() + course.trialPeriodDays);
+            const now = new Date();
+            
+            if (now < trialEndDate) {
+              subscriptionStatus = 'TRIAL';
+              const daysLeft = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              trialDaysRemaining = daysLeft;
+            } else {
+              subscriptionStatus = 'EXPIRED';
+            }
+          } else if (course.subscriptionType === 'FREE') {
+            subscriptionStatus = 'FREE';
+          } else if (course.subscriptionType === 'PAID') {
+            subscriptionStatus = 'PAID';
+          }
+        }
+
         return {
           ...course,
           hasAccess,
           studentCourseStatus: studentCourseStatus || null,
           canRequestAccess: !studentCourseStatus && !hasAccess && course.isVisible,
           hasTrialAccess,
+          subscriptionStatus,
+          trialDaysRemaining,
         };
       });
 
