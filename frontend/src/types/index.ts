@@ -25,6 +25,11 @@ export interface User {
   telegram?: string | null;
   role: Role;
   language?: SupportedLanguage;
+  isPaidTeacher?: boolean;
+  coins?: number;
+  city?: string | null;
+  region?: string | null;
+  country?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -67,6 +72,92 @@ export interface Course {
   };
   hasAccess?: boolean;
   studentCourseStatus?: StudentCourseStatus | null;
+}
+
+export interface IntermediateTest {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string | null;
+  order: number;
+  passingScore: number;
+  timeLimit?: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  questions?: IntermediateTestQuestion[];
+  _count?: {
+    questions: number;
+    results: number;
+  };
+}
+
+export interface IntermediateTestQuestion {
+  id: string;
+  testId: string;
+  question: string;
+  type: 'SINGLE' | 'MULTIPLE' | 'TEXT';
+  order: number;
+  points: number;
+  options?: IntermediateTestOption[];
+}
+
+export interface IntermediateTestOption {
+  id: string;
+  questionId: string;
+  text: string;
+  isCorrect?: boolean;
+  order: number;
+}
+
+export interface IntermediateTestResult {
+  id: string;
+  testId: string;
+  studentId: string;
+  score: number;
+  percentage: number;
+  passed: boolean;
+  timeSpent?: number | null;
+  createdAt: string;
+  answers?: IntermediateTestAnswer[];
+}
+
+export interface IntermediateTestAnswer {
+  id: string;
+  resultId: string;
+  questionId: string;
+  optionIds: string[];
+  textAnswer?: string | null;
+  isCorrect: boolean;
+  points: number;
+}
+
+export interface Story {
+  id: string;
+  title?: string | null;
+  imageUrl: string;
+  videoUrl?: string | null;
+  link?: string | null;
+  isActive: boolean;
+  expiresAt?: string | null;
+  order: number;
+  createdAt: string;
+  _count?: {
+    views: number;
+  };
+}
+
+export interface Banner {
+  id: string;
+  title?: string | null;
+  imageUrl: string;
+  link?: string | null;
+  position: 'TOP' | 'BOTTOM' | 'SIDEBAR';
+  isActive: boolean;
+  order: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  createdAt: string;
 }
 
 export interface Lesson {

@@ -201,6 +201,14 @@ export default function Profile() {
         <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gradient">
           Профиль
         </h1>
+        {userResponse?.coins !== undefined && (
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-lg">
+            <span className="text-2xl">🪙</span>
+            <span className="text-lg font-bold text-yellow-700">
+              {userResponse.coins} коинов
+            </span>
+          </div>
+        )}
       </div>
 
       {errorMessage && (
