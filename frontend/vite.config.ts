@@ -26,14 +26,7 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
-        // Убедимся что vendor-react загружается первым
-        entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name === 'vendor-react') {
-            return 'assets/vendor-react-[hash].js';
-          }
-          return 'assets/[name]-[hash].js';
-        },
-        // Code splitting - разделение на чанки
+        // Убедимся что vendor-react загружается первым через правильный порядок
         manualChunks: (id) => {
           // Vendor chunks - упрощенное разделение для избежания проблем с порядком загрузки
           if (id.includes('node_modules')) {
