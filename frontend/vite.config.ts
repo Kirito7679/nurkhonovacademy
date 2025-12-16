@@ -26,37 +26,34 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
+        // Убедимся что vendor-react загружается первым
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'vendor-react') {
+            return 'assets/vendor-react-[hash].js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
         // Code splitting - разделение на чанки
         manualChunks: (id) => {
-          // Vendor chunks - более детальное разделение
+          // Vendor chunks - упрощенное разделение для избежания проблем с порядком загрузки
           if (id.includes('node_modules')) {
-            // React должен быть в отдельном чанке и загружаться первым
-            // ВАЖНО: Все что использует React должно быть вместе с React
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router') || 
-                id.includes('react-query') || id.includes('react-hook-form') || 
-                id.includes('react-i18next') || id.includes('react-player') ||
-                id.includes('zustand')) {
+            // ВСЕ что связано с React должно быть в vendor-react
+            // Это гарантирует что React загружается первым и доступен для всех зависимостей
+            if (id.includes('react') || 
+                id.includes('react-dom') || 
+                id.includes('react-router') || 
+                id.includes('react-query') || 
+                id.includes('react-hook-form') || 
+                id.includes('react-i18next') || 
+                id.includes('react-player') ||
+                id.includes('zustand') || 
+                id.includes('@hookform') || 
+                id.includes('@tanstack') ||
+                id.includes('lucide-react') || // Иконки могут использовать React контекст
+                id.includes('recharts')) { // Charts могут использовать React
               return 'vendor-react';
             }
-            if (id.includes('axios') || id.includes('socket.io')) {
-              return 'vendor-network';
-            }
-            if (id.includes('zod')) {
-              return 'vendor-forms';
-            }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
-            if (id.includes('i18next')) {
-              return 'vendor-i18n';
-            }
-            if (id.includes('recharts')) {
-              return 'vendor-charts';
-            }
-            if (id.includes('dompurify')) {
-              return 'vendor-utils';
-            }
-            // Остальные node_modules
+            // Остальные библиотеки
             return 'vendor-other';
           }
         },
