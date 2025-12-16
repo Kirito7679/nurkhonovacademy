@@ -7,7 +7,7 @@ export enum Role {
   CURATOR = 'CURATOR',
 }
 
-export type SupportedLanguage = 'ru' | 'en' | 'uz';
+export type SupportedLanguage = 'ru' | 'en' | 'uz' | 'kk';
 
 export enum StudentCourseStatus {
   PENDING = 'PENDING',

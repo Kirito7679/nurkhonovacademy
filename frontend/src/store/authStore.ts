@@ -17,9 +17,13 @@ export const useAuthStore = create<AuthState>((set) => {
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
 
-  // Set language from user preference
-  if (user?.language && ['ru', 'en', 'uz'].includes(user.language)) {
+  // Set language from user preference or localStorage
+  const savedLanguage = localStorage.getItem('i18nextLng');
+  if (user?.language && ['ru', 'en', 'uz', 'kk'].includes(user.language)) {
     i18n.changeLanguage(user.language);
+    localStorage.setItem('i18nextLng', user.language);
+  } else if (savedLanguage && ['ru', 'en', 'uz', 'kk'].includes(savedLanguage)) {
+    i18n.changeLanguage(savedLanguage);
   }
 
   return {
@@ -31,8 +35,9 @@ export const useAuthStore = create<AuthState>((set) => {
       localStorage.setItem('user', JSON.stringify(user));
       
       // Update language if user has preference
-      if (user.language && ['ru', 'en', 'uz'].includes(user.language)) {
+      if (user.language && ['ru', 'en', 'uz', 'kk'].includes(user.language)) {
         i18n.changeLanguage(user.language);
+        localStorage.setItem('i18nextLng', user.language);
       }
       
       set({ user, token, isAuthenticated: true });
@@ -46,8 +51,9 @@ export const useAuthStore = create<AuthState>((set) => {
       localStorage.setItem('user', JSON.stringify(user));
       
       // Update language if changed
-      if (user.language && ['ru', 'en', 'uz'].includes(user.language)) {
+      if (user.language && ['ru', 'en', 'uz', 'kk'].includes(user.language)) {
         i18n.changeLanguage(user.language);
+        localStorage.setItem('i18nextLng', user.language);
       }
       
       set({ user });

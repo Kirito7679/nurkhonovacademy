@@ -8,6 +8,7 @@ const languages = [
   { code: 'ru', name: 'Русский', flag: '🇷🇺' },
   { code: 'en', name: 'English', flag: '🇺🇸' },
   { code: 'uz', name: "O'zbek", flag: '🇺🇿' },
+  { code: 'kk', name: 'Қазақша', flag: '🇰🇿' },
 ];
 
 export default function LanguageSwitcher() {
@@ -16,7 +17,12 @@ export default function LanguageSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLanguageChange = async (langCode: string) => {
-    i18n.changeLanguage(langCode);
+    // Change language immediately
+    await i18n.changeLanguage(langCode);
+    
+    // Save language to localStorage (for all users, including non-authenticated)
+    localStorage.setItem('i18nextLng', langCode);
+    
     setIsOpen(false);
     
     // Save language preference to backend if user is logged in

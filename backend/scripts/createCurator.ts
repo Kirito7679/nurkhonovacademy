@@ -234,3 +234,5 @@ main().catch((error) => {
   console.error('❌ Критическая ошибка:', error);
   process.exit(1);
 });
+
+

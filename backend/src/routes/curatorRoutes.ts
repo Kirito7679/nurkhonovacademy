@@ -18,3 +18,5 @@ router.post('/', createCurator);
 router.get('/', getAllCurators);
 
 export default router;
+
+

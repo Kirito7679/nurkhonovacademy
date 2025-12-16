@@ -1,8 +1,8 @@
-export default function Logo({ className = "w-8 h-8", variant = "icon" }: { className?: string; variant?: "icon" | "full" }) {
+export default function Logo({ className = "w-auto h-8" }: { className?: string }) {
   return (
     <svg
       className={className}
-      viewBox="0 0 200 50"
+      viewBox="0 0 250 50"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -14,57 +14,33 @@ export default function Logo({ className = "w-8 h-8", variant = "icon" }: { clas
         </linearGradient>
       </defs>
       
-      {variant === "icon" ? (
-        <>
-          {/* Стилизованная буква N - сильная, геометрическая */}
-          <path
-            d="M8 8 L8 42 M8 8 L32 42 M32 8 L32 42"
-            stroke="url(#nurkhonovGradient)"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Акцентная линия под N */}
-          <line
-            x1="8"
-            y1="45"
-            x2="32"
-            y2="45"
-            stroke="url(#nurkhonovGradient)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            opacity="0.8"
-          />
-        </>
-      ) : (
-        <>
-          {/* Полный текст "Nurkhonov_" */}
-          <text
-            x="0"
-            y="32"
-            fontSize="28"
-            fontWeight="800"
-            fill="url(#nurkhonovGradient)"
-            fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
-            letterSpacing="1"
-          >
-            Nurkhonov_
-          </text>
-          {/* Подчеркивание */}
-          <line
-            x1="0"
-            y1="38"
-            x2="180"
-            y2="38"
-            stroke="url(#nurkhonovGradient)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-        </>
-      )}
+      {/* Полный текст "Nurkhonov_Academy" */}
+      <text
+        x="0"
+        y="32"
+        fontSize="24"
+        fontWeight="800"
+        fill="url(#nurkhonovGradient)"
+        fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        letterSpacing="0.5"
+      >
+        Nurkhonov_Academy
+      </text>
+      {/* Подчеркивание */}
+      <line
+        x1="0"
+        y1="38"
+        x2="240"
+        y2="38"
+        stroke="url(#nurkhonovGradient)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
+
+
 
 
 

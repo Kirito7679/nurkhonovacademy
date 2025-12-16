@@ -1,7 +1,7 @@
 // Simple i18n utility for backend
 // For full i18n support, consider using i18next or similar library
 
-export const supportedLanguages = ['ru', 'en', 'uz'] as const;
+export const supportedLanguages = ['ru', 'en', 'uz', 'kk'] as const;
 export type SupportedLanguage = typeof supportedLanguages[number];
 
 export const defaultLanguage: SupportedLanguage = 'ru';
@@ -33,6 +33,15 @@ const translations: Record<SupportedLanguage, Record<string, string>> = {
     'success.created': 'Muvaffaqiyatli yaratildi',
     'success.updated': 'Muvaffaqiyatli yangilandi',
     'success.deleted': 'Muvaffaqiyatli o\'chirildi',
+  },
+  kk: {
+    'error.unauthorized': 'Авторизация талап етіледі',
+    'error.forbidden': 'Жеткілікті рұқсат жоқ',
+    'error.notFound': 'Ресурс табылмады',
+    'error.validation': 'Валидация қатесі',
+    'success.created': 'Сәтті жасалды',
+    'success.updated': 'Сәтті жаңартылды',
+    'success.deleted': 'Сәтті жойылды',
   },
 };
 

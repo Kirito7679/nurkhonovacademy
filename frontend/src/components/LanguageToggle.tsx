@@ -13,12 +13,18 @@ export default function LanguageToggle() {
     { code: 'ru', name: 'Русский', flag: '🇷🇺' },
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'uz', name: "O'zbek", flag: '🇺🇿' },
+    { code: 'kk', name: 'Қазақша', flag: '🇰🇿' },
   ];
 
   const currentLanguage = languages.find((lang) => lang.code === i18n.language) || languages[0];
 
   const changeLanguage = async (langCode: string) => {
-    i18n.changeLanguage(langCode);
+    // Change language immediately
+    await i18n.changeLanguage(langCode);
+    
+    // Save language to localStorage (for all users, including non-authenticated)
+    localStorage.setItem('i18nextLng', langCode);
+    
     setIsOpen(false);
     
     // Save language preference to backend if user is logged in

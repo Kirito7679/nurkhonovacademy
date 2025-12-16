@@ -30,11 +30,36 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiResponse<unknown>>) => {
+  async (error: AxiosError<ApiResponse<unknown>>) => {
+    // Handle 429 Too Many Requests
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'];
+      const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+      
+      // Log error but don't show to user for rate limit errors (unless it's auth)
+      const isAuthRequest = error.config?.url?.includes('/auth/login') || 
+                           error.config?.url?.includes('/auth/register');
+      
+      if (import.meta.env.DEV || isAuthRequest) {
+        console.warn(`Rate limit exceeded. Retry after ${retryAfterSeconds} seconds.`);
+      }
+      
+      // Return error with retry info
+      return Promise.reject({
+        ...error,
+        retryAfter: retryAfterSeconds,
+        isRateLimit: true,
+      });
+    }
+    
     if (error.response?.status === 401) {
-      // Only redirect if not already on login/register page to avoid redirect loops
+      // Only redirect if not already on login/register page and not during login/register requests
       const currentPath = window.location.pathname;
-      if (currentPath !== '/login' && currentPath !== '/register') {
+      const isAuthRequest = error.config?.url?.includes('/auth/login') || 
+                           error.config?.url?.includes('/auth/register');
+      
+      // Don't redirect on login/register pages or during auth requests
+      if (!isAuthRequest && currentPath !== '/login' && currentPath !== '/register') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';

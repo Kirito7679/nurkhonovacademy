@@ -17,7 +17,7 @@ export const updateProfileSchema = z.object({
   lastName: z.string().min(1).optional(),
   phone: z.string().min(10).optional(),
   email: z.string().email().optional().or(z.literal('')),
-  language: z.enum(['ru', 'en', 'uz']).optional(),
+  language: z.enum(['ru', 'en', 'uz', 'kk']).optional(),
 });
 
 export const changePasswordSchema = z.object({

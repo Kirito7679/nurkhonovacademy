@@ -163,3 +163,5 @@ curl -X POST http://localhost:5001/api/classes/CLASS_ID/students \
 ---
 
 **Готово к тестированию!** 🚀
+
+

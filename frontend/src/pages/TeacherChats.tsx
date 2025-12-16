@@ -49,7 +49,11 @@ export default function TeacherChats() {
       }>>(`/messages/chat/${selectedStudentId}`);
       return response.data.data;
     },
-    { enabled: !!selectedStudentId, refetchInterval: 3000 }
+    { 
+      enabled: !!selectedStudentId, 
+      refetchInterval: 10000, // Увеличено до 10 секунд чтобы не превышать rate limit
+      refetchOnWindowFocus: false,
+    }
   );
 
   const uploadFileMutation = useMutation(

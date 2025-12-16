@@ -18,3 +18,5 @@ router.post('/classes/:classId/messages', authenticate, sendClassMessage);
 router.delete('/classes/messages/:messageId', authenticate, deleteClassMessage);
 
 export default router;
+
+

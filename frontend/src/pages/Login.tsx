@@ -52,7 +52,11 @@ export default function Login() {
         }
       }
     } catch (err: ApiError) {
-      setError(err.response?.data?.message || t('errors.somethingWentWrong'));
+      if (err.response?.status === 429) {
+        setError('Слишком много попыток входа. Пожалуйста, подождите несколько минут и попробуйте снова.');
+      } else {
+        setError(err.response?.data?.message || t('errors.somethingWentWrong'));
+      }
     } finally {
       setLoading(false);
     }
@@ -63,7 +67,7 @@ export default function Login() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="relative inline-flex items-center justify-center mb-4">
-            <Logo className="w-16 h-16" variant="icon" />
+            <Logo className="h-12 md:h-16" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gradient">
             {t('auth.login')}

@@ -30,3 +30,5 @@ router.put('/:id/students/:studentId/status', authenticate, requireRole('TEACHER
 
 export default router;
 
+
+

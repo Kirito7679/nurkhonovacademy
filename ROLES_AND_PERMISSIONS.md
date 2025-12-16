@@ -82,3 +82,5 @@
 
 ### Чаты:
 - `GET /api/messages/teacher/chats` - Список чатов (TEACHER видит только своих студентов)
+
+
