@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createCurator,
   getAllCurators,
+  deleteCurator,
 } from '../controllers/curatorController';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roleCheck';
@@ -16,6 +17,9 @@ router.post('/', createCurator);
 
 // Get all curators
 router.get('/', getAllCurators);
+
+// Delete curator
+router.delete('/:id', deleteCurator);
 
 export default router;
 

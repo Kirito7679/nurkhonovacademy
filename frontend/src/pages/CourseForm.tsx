@@ -61,6 +61,7 @@ export default function CourseForm() {
     isOpen: boolean;
     moduleId: string | null;
   }>({ isOpen: false, moduleId: null });
+  const [deleteCourseConfirm, setDeleteCourseConfirm] = useState(false);
 
   const createCourseMutation = useMutation(
     async (data: CourseFormData) => {
@@ -129,6 +130,18 @@ export default function CourseForm() {
     {
       onSuccess: () => {
         refetchModules();
+      },
+    }
+  );
+
+  const deleteCourseMutation = useMutation(
+    async () => {
+      await api.delete(`/courses/${id}`);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('teacherCourses');
+        navigate('/teacher/courses');
       },
     }
   );

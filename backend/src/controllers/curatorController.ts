@@ -122,4 +122,40 @@ export const getAllCurators = async (
   }
 };
 
+// Удалить куратора (только админ)
+export const deleteCurator = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Только админ может удалять кураторов
+    if (req.user?.role !== 'ADMIN') {
+      throw new AppError('Только администратор может удалять кураторов', 403);
+    }
+
+    const { id } = req.params;
+
+    const curator = await prisma.user.findUnique({
+      where: { id, role: 'CURATOR' },
+    });
+
+    if (!curator) {
+      throw new AppError('Куратор не найден', 404);
+    }
+
+    // Delete curator (cascade will handle related records)
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    res.json({
+      success: true,
+      message: 'Куратор успешно удален',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

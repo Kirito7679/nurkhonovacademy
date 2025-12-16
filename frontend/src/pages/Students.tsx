@@ -6,10 +6,11 @@ import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { ApiResponse, User, ApiError } from '../types';
-import { Search, User as UserIcon, ArrowRight, Eye, Plus, X, Download } from 'lucide-react';
+import { Search, User as UserIcon, ArrowRight, Eye, Plus, X, Download, Trash2 } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
 import { useAuthStore } from '../store/authStore';
+import ConfirmModal from '../components/ConfirmModal';
 
 const createStudentSchema = z.object({
   firstName: z.string().min(1, 'Имя обязательно'),
@@ -26,6 +27,10 @@ export default function Students() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; studentId: string | null }>({
+    isOpen: false,
+    studentId: null,
+  });
   const queryClient = useQueryClient();
   
   const isAdmin = user?.role === 'ADMIN';
@@ -72,6 +77,18 @@ export default function Students() {
         queryClient.invalidateQueries('students');
         setIsModalOpen(false);
         reset();
+      },
+    }
+  );
+
+  const deleteStudentMutation = useMutation(
+    async (studentId: string) => {
+      await api.delete(`/students/${studentId}`);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('students');
+        setDeleteConfirm({ isOpen: false, studentId: null });
       },
     }
   );
@@ -370,14 +387,26 @@ export default function Students() {
                       {student._count?.studentCourses || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        to={`/teacher/students/${student.id}`}
-                        className="group inline-flex items-center gap-2 px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span>Просмотр</span>
-                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
-                      </Link>
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/teacher/students/${student.id}`}
+                          className="group inline-flex items-center gap-2 px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>Просмотр</span>
+                          <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+                        </Link>
+                        {isAdmin && (
+                          <button
+                            onClick={() => setDeleteConfirm({ isOpen: true, studentId: student.id })}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
+                            title="Удалить студента"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span>Удалить</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -409,19 +438,47 @@ export default function Students() {
                 <span>Email: {student.email || '-'}</span>
                 <span>Курсов: {student._count?.studentCourses || 0}</span>
               </div>
-              <Link
-                to={`/teacher/students/${student.id}`}
-                className="group inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
-              >
-                <Eye className="h-4 w-4" />
-                <span>Просмотр</span>
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
-              </Link>
+              <div className="flex gap-2">
+                <Link
+                  to={`/teacher/students/${student.id}`}
+                  className="group inline-flex items-center justify-center gap-2 flex-1 px-4 py-2 text-primary-600 hover:text-primary-700 border border-primary-300 rounded-lg hover:bg-primary-50 transition-all duration-200 text-sm"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>Просмотр</span>
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+                </Link>
+                {isAdmin && (
+                  <button
+                    onClick={() => setDeleteConfirm({ isOpen: true, studentId: student.id })}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
+                    title="Удалить студента"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Удалить</span>
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
         </>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, studentId: null })}
+        onConfirm={() => {
+          if (deleteConfirm.studentId) {
+            deleteStudentMutation.mutate(deleteConfirm.studentId);
+          }
+        }}
+        title="Удаление студента"
+        message="Вы уверены, что хотите удалить этого студента? Это действие нельзя отменить."
+        confirmText={deleteStudentMutation.isLoading ? 'Удаление...' : 'Удалить'}
+        cancelText="Отмена"
+        variant="danger"
+      />
     </div>
   );
 }

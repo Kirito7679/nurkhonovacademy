@@ -5,10 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../services/api';
 import { ApiResponse, User, ApiError } from '../types';
-import { Search, User as UserIcon, Plus, X, Users } from 'lucide-react';
+import { Search, User as UserIcon, Plus, X, Users, Trash2 } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
 import { useAuthStore } from '../store/authStore';
+import ConfirmModal from '../components/ConfirmModal';
 
 const createCuratorSchema = z.object({
   firstName: z.string().min(1, 'Имя обязательно'),
@@ -25,6 +26,10 @@ export default function Curators() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; curatorId: string | null }>({
+    isOpen: false,
+    curatorId: null,
+  });
   const queryClient = useQueryClient();
 
   // Проверка прав доступа
@@ -74,6 +79,18 @@ export default function Curators() {
         queryClient.invalidateQueries('curators');
         setIsModalOpen(false);
         reset();
+      },
+    }
+  );
+
+  const deleteCuratorMutation = useMutation(
+    async (curatorId: string) => {
+      await api.delete(`/curators/${curatorId}`);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('curators');
+        setDeleteConfirm({ isOpen: false, curatorId: null });
       },
     }
   );
@@ -337,6 +354,9 @@ export default function Curators() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                       Дата создания
                     </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase tracking-wider">
+                      Действия
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-neutral-200">
@@ -372,6 +392,16 @@ export default function Curators() {
                           year: 'numeric',
                         })}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => setDeleteConfirm({ isOpen: true, curatorId: curator.id })}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
+                          title="Удалить куратора"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span>Удалить</span>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -402,11 +432,35 @@ export default function Curators() {
                     </div>
                   </div>
                 </div>
+                <button
+                  onClick={() => setDeleteConfirm({ isOpen: true, curatorId: curator.id })}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 text-sm"
+                  title="Удалить куратора"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Удалить</span>
+                </button>
               </div>
             ))}
           </div>
         </>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, curatorId: null })}
+        onConfirm={() => {
+          if (deleteConfirm.curatorId) {
+            deleteCuratorMutation.mutate(deleteConfirm.curatorId);
+          }
+        }}
+        title="Удаление куратора"
+        message="Вы уверены, что хотите удалить этого куратора? Это действие нельзя отменить."
+        confirmText={deleteCuratorMutation.isLoading ? 'Удаление...' : 'Удалить'}
+        cancelText="Отмена"
+        variant="danger"
+      />
     </div>
   );
 }
