@@ -3,16 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
-import { Course, Lesson, ApiResponse, StudentCourseStatus, Module, IntermediateTest } from '../types';
+import { Course, Lesson, ApiResponse, StudentCourseStatus, Module, IntermediateTest, Role } from '../types';
 import { Play, Lock, CheckCircle, BookOpen, Clock, User, ArrowRight, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import CoursePurchaseModal from '../components/CoursePurchaseModal';
 import Banner from '../components/Banner';
+import { useAuthStore } from '../store/authStore';
 
 export default function CourseDetails() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showLessons, setShowLessons] = useState(true);
 
@@ -55,6 +57,14 @@ export default function CourseDetails() {
     }
   );
 
+  // Определяем, можно ли запрашивать тесты
+  const canAccessTests = courseResponse && (
+    // Учителя и админы могут видеть тесты своих курсов
+    (user?.role === Role.TEACHER || user?.role === Role.ADMIN || user?.role === Role.CURATOR) ||
+    // Студенты могут видеть тесты только если есть доступ к курсу
+    (user?.role === Role.STUDENT && courseResponse.hasAccess === true && courseResponse.studentCourseStatus === StudentCourseStatus.APPROVED)
+  );
+
   const { data: testsResponse } = useQuery(
     ['tests', id],
     async () => {
@@ -72,7 +82,7 @@ export default function CourseDetails() {
     {
       staleTime: 5 * 60 * 1000,
       cacheTime: 10 * 60 * 1000,
-      enabled: !!id && courseResponse?.hasAccess,
+      enabled: !!id && !!canAccessTests, // Запрос отправляется только если есть доступ
       retry: false, // Не повторять запрос при ошибке доступа
     }
   );
