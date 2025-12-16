@@ -58,11 +58,18 @@ export default function CourseDetails() {
   );
 
   // Определяем, можно ли запрашивать тесты
-  const canAccessTests = courseResponse && (
-    // Учителя и админы могут видеть тесты своих курсов
-    (user?.role === Role.TEACHER || user?.role === Role.ADMIN || user?.role === Role.CURATOR) ||
-    // Студенты могут видеть тесты только если есть доступ к курсу
-    (user?.role === Role.STUDENT && courseResponse.hasAccess === true && courseResponse.studentCourseStatus === StudentCourseStatus.APPROVED)
+  // Запрос отправляется только если:
+  // 1. Курс загружен
+  // 2. И (учитель/админ ИЛИ студент с APPROVED доступом)
+  const canAccessTests = courseResponse && !courseLoading && (
+    // Админы и кураторы могут видеть все тесты
+    user?.role === Role.ADMIN || user?.role === Role.CURATOR ||
+    // Учителя могут видеть тесты своих курсов
+    (user?.role === Role.TEACHER && courseResponse.teacherId === user.id) ||
+    // Студенты могут видеть тесты только если есть APPROVED доступ
+    (user?.role === Role.STUDENT && 
+     courseResponse.hasAccess === true && 
+     courseResponse.studentCourseStatus === StudentCourseStatus.APPROVED)
   );
 
   const { data: testsResponse } = useQuery(
