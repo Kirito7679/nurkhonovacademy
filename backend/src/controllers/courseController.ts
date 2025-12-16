@@ -123,7 +123,7 @@ export const getAllCourses = async (
         },
         select: {
           courseId: true,
-          enrolledAt: true,
+          approvedAt: true,
         },
       });
 
@@ -144,8 +144,8 @@ export const getAllCourses = async (
         if (hasAccess && studentCourseStatus) {
           const studentCourse = studentCourseSubMap.get(course.id);
 
-          if (studentCourse && course.subscriptionType === 'TRIAL' && course.trialPeriodDays) {
-            const enrolledDate = new Date(studentCourse.enrolledAt);
+          if (studentCourse && course.subscriptionType === 'TRIAL' && course.trialPeriodDays && studentCourse.approvedAt) {
+            const enrolledDate = new Date(studentCourse.approvedAt);
             const trialEndDate = new Date(enrolledDate);
             trialEndDate.setDate(trialEndDate.getDate() + course.trialPeriodDays);
             const now = new Date();

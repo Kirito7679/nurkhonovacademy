@@ -49,9 +49,9 @@ export const register = async (
         phone: validatedData.phone,
         password: hashedPassword,
         role: 'STUDENT',
-        city: location.city || null,
-        region: location.region || null,
-        country: location.country || null,
+        city: location.city || undefined,
+        region: location.region || undefined,
+        country: location.country || undefined,
       },
       select: {
         id: true,

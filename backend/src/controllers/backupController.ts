@@ -3,7 +3,7 @@ import { AppError } from '../utils/errors';
 import { AuthRequest } from '../middleware/auth';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createBackup as createBackupScript } from '../../scripts/backup';
+// Note: backup script is called via exec to avoid rootDir issues
 
 export const createBackup = async (
   req: AuthRequest,
@@ -18,14 +18,15 @@ export const createBackup = async (
 
     const { type = 'MANUAL' } = req.body;
 
-    // Create backup asynchronously
-    createBackupScript()
-      .then((result) => {
-        console.log('Backup created successfully:', result);
-      })
-      .catch((error) => {
+    // Create backup asynchronously using exec to avoid rootDir issues
+    const { exec } = require('child_process');
+    exec('npm run backup', (error: any, stdout: string, stderr: string) => {
+      if (error) {
         console.error('Backup creation failed:', error);
-      });
+        return;
+      }
+      console.log('Backup created successfully');
+    });
 
     // Return immediately - backup runs in background
     res.status(202).json({

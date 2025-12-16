@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 interface GeolocationData {
-  city?: string;
-  region?: string;
-  country?: string;
+  city?: string | undefined;
+  region?: string | undefined;
+  country?: string | undefined;
 }
 
 /**
@@ -18,9 +18,9 @@ export const getLocationFromIP = async (ip: string): Promise<GeolocationData> =>
     // Skip localhost
     if (cleanIP === '127.0.0.1' || cleanIP === '::1' || cleanIP.startsWith('192.168.') || cleanIP.startsWith('10.')) {
       return {
-        city: null,
-        region: null,
-        country: null,
+        city: undefined,
+        region: undefined,
+        country: undefined,
       };
     }
 
@@ -29,16 +29,16 @@ export const getLocationFromIP = async (ip: string): Promise<GeolocationData> =>
     });
 
     return {
-      city: response.data.city || null,
-      region: response.data.region || null,
-      country: response.data.country_name || null,
+      city: response.data.city || undefined,
+      region: response.data.region || undefined,
+      country: response.data.country_name || undefined,
     };
   } catch (error) {
     console.error('Error getting location from IP:', error);
     return {
-      city: null,
-      region: null,
-      country: null,
+      city: undefined,
+      region: undefined,
+      country: undefined,
     };
   }
 };
@@ -57,9 +57,9 @@ export const getLocationFromRequest = async (req: any): Promise<GeolocationData>
 
     if (!ip) {
       return {
-        city: null,
-        region: null,
-        country: null,
+        city: undefined,
+        region: undefined,
+        country: undefined,
       };
     }
 
@@ -67,9 +67,9 @@ export const getLocationFromRequest = async (req: any): Promise<GeolocationData>
   } catch (error) {
     console.error('Error getting location from request:', error);
     return {
-      city: null,
-      region: null,
-      country: null,
+      city: undefined,
+      region: undefined,
+      country: undefined,
     };
   }
 };
