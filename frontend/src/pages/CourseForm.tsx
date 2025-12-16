@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import api from '../services/api';
 import { ApiResponse, Course, Lesson, Module } from '../types';
-import { ArrowLeft, Save, Image as ImageIcon, Plus, Trash2, Edit2, ChevronDown, ChevronUp, BookOpen, List } from 'lucide-react';
+import { ArrowLeft, Save, Image as ImageIcon, Plus, Trash2, Edit2, ChevronDown, ChevronUp, BookOpen, List, FileText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import ErrorModal from '../components/ErrorModal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -56,7 +56,7 @@ export default function CourseForm() {
   const [moduleTitle, setModuleTitle] = useState('');
   const [moduleDescription, setModuleDescription] = useState('');
   const [moduleOrder, setModuleOrder] = useState<number | ''>(0);
-  const [activeTab, setActiveTab] = useState<'info' | 'modules' | 'lessons'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'modules' | 'lessons' | 'tests'>('info');
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [showModuleForm, setShowModuleForm] = useState(false);
   const [errorModal, setErrorModal] = useState({ isOpen: false, message: '' });
@@ -307,6 +307,53 @@ export default function CourseForm() {
         <div className="space-y-6">
           {/* Tabs */}
           <div className="border-b border-neutral-200">
+            <div className="flex space-x-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab('info')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === 'info'
+                    ? 'border-b-2 border-primary-500 text-primary-600'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                Информация
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('modules')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === 'modules'
+                    ? 'border-b-2 border-primary-500 text-primary-600'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                Модули
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('lessons')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === 'lessons'
+                    ? 'border-b-2 border-primary-500 text-primary-600'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                Уроки
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('tests')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === 'tests'
+                    ? 'border-b-2 border-primary-500 text-primary-600'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                Тесты
+              </button>
+            </div>
+          </div>
             <nav className="flex space-x-1">
               <button
                 type="button"
@@ -799,6 +846,25 @@ export default function CourseForm() {
                     })}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'tests' && (
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-neutral-900">Промежуточные тесты</h2>
+                <Link
+                  to={`/teacher/courses/${id}/tests/new`}
+                  className="btn-primary text-sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Создать тест
+                </Link>
+              </div>
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-neutral-300 mx-auto mb-4" />
+                <p className="text-neutral-500 text-sm">Создайте промежуточные тесты для проверки знаний</p>
+              </div>
             </div>
           )}
         </div>

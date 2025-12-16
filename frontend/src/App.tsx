@@ -26,6 +26,8 @@ import ClassDetails from './pages/ClassDetails';
 import ClassChat from './pages/ClassChat';
 import Curators from './pages/Curators';
 import TeacherPayment from './pages/TeacherPayment';
+import IntermediateTestForm from './pages/IntermediateTestForm';
+import IntermediateTestView from './pages/IntermediateTestView';
 import Layout from './components/Layout';
 import { Role } from './types';
 
@@ -93,6 +95,14 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[Role.STUDENT]}>
                 <LessonView />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/courses/:courseId/tests/:testId"
+            element={
+              <PrivateRoute allowedRoles={[Role.STUDENT]}>
+                <IntermediateTestView />
               </PrivateRoute>
             }
           />
@@ -223,6 +233,14 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
                 <LessonForm />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/teacher/courses/:courseId/tests/new"
+            element={
+              <PrivateRoute allowedRoles={[Role.TEACHER, Role.ADMIN, Role.MODERATOR]}>
+                <IntermediateTestForm />
               </PrivateRoute>
             }
           />

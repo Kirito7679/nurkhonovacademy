@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
-import { Course, Lesson, ApiResponse, StudentCourseStatus, Module } from '../types';
-import { Play, Lock, CheckCircle, BookOpen, Clock, User, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Course, Lesson, ApiResponse, StudentCourseStatus, Module, IntermediateTest } from '../types';
+import { Play, Lock, CheckCircle, BookOpen, Clock, User, ArrowRight, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import CoursePurchaseModal from '../components/CoursePurchaseModal';
+import Banner from '../components/Banner';
 
 export default function CourseDetails() {
   const { t } = useTranslation();
@@ -41,6 +42,15 @@ export default function CourseDetails() {
     { enabled: !!id }
   );
 
+  const { data: testsResponse } = useQuery(
+    ['tests', id],
+    async () => {
+      const response = await api.get<ApiResponse<IntermediateTest[]>>(`/tests/courses/${id}/tests`);
+      return response.data.data || [];
+    },
+    { enabled: !!id && course?.hasAccess }
+  );
+
   const requestAccessMutation = useMutation(
     async () => {
       const response = await api.post<ApiResponse<{ status: StudentCourseStatus }>>(`/courses/${id}/request`);
@@ -60,6 +70,7 @@ export default function CourseDetails() {
   const course = courseResponse;
   const lessons = lessonsResponse || [];
   const modules = modulesResponse || [];
+  const tests = testsResponse || [];
   const trialLesson = course?.trialLessonId
     ? lessons.find((l) => l.id === course.trialLessonId)
     : null;
@@ -134,6 +145,9 @@ export default function CourseDetails() {
 
   return (
     <div>
+      {/* Banner Top */}
+      <Banner position="TOP" />
+
       {/* Course Banner */}
       {course.thumbnailUrl && (
         <div className="relative w-full h-48 md:h-64 lg:h-80 mb-8 rounded-lg overflow-hidden animate-fade-scale">
@@ -205,6 +219,39 @@ export default function CourseDetails() {
             <p className="text-neutral-600 text-sm md:text-base lg:text-lg leading-relaxed break-words whitespace-pre-line">
               {course.description}
             </p>
+          </div>
+        )}
+
+        {/* Intermediate Tests */}
+        {course.hasAccess && testsResponse && testsResponse.length > 0 && (
+          <div className="card p-6 md:p-8 mb-6">
+            <h2 className="text-xl md:text-2xl font-semibold text-neutral-900 mb-6">Промежуточные тесты</h2>
+            <div className="space-y-3">
+              {testsResponse.map((test) => (
+                <div
+                  key={test.id}
+                  className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:border-primary-300 transition-colors"
+                >
+                  <div className="flex-1">
+                    <h3 className="font-medium text-neutral-900">{test.title}</h3>
+                    {test.description && (
+                      <p className="text-sm text-neutral-600 mt-1">{test.description}</p>
+                    )}
+                    <p className="text-xs text-neutral-500 mt-2">
+                      Проходной балл: {test.passingScore}% • 
+                      {test.timeLimit ? ` Время: ${test.timeLimit} мин` : ' Без ограничения времени'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/courses/${id}/tests/${test.id}`)}
+                    className="btn-primary text-sm ml-4"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Пройти тест
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

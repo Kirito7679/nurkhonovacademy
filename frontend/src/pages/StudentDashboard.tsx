@@ -5,6 +5,8 @@ import api from '../services/api';
 import { Course, ApiResponse } from '../types';
 import { BookOpen, Clock, CheckCircle, TrendingUp, Award, PlayCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import StoriesCarousel from '../components/StoriesCarousel';
+import Banner from '../components/Banner';
 
 interface StudentStats {
   totalCourses: number;
@@ -64,6 +66,14 @@ export default function StudentDashboard() {
 
   return (
     <div>
+      {/* Banner Top */}
+      <Banner position="TOP" />
+
+      {/* Stories Carousel */}
+      <div className="mb-6">
+        <StoriesCarousel />
+      </div>
+
       {/* Greeting Section */}
       <div className="mb-8 animate-slide-in">
         <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-gradient mb-2">
