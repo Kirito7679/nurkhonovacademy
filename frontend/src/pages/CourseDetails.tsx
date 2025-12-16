@@ -223,11 +223,11 @@ export default function CourseDetails() {
         )}
 
         {/* Intermediate Tests */}
-        {course.hasAccess && testsResponse && testsResponse.length > 0 && (
+        {course.hasAccess && tests.length > 0 && (
           <div className="card p-6 md:p-8 mb-6">
             <h2 className="text-xl md:text-2xl font-semibold text-neutral-900 mb-6">Промежуточные тесты</h2>
             <div className="space-y-3">
-              {testsResponse.map((test) => (
+              {tests.map((test) => (
                 <div
                   key={test.id}
                   className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:border-primary-300 transition-colors"
