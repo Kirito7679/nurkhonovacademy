@@ -329,6 +329,12 @@ export const updateProfile = async (
         email: true,
         avatarUrl: true,
         role: true,
+        language: true,
+        isPaidTeacher: true,
+        coins: true,
+        city: true,
+        region: true,
+        country: true,
         updatedAt: true,
       },
     });
