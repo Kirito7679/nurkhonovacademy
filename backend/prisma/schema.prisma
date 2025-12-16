@@ -11,18 +11,23 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  firstName String
-  lastName  String
-  phone     String   @unique
-  email     String?
-  password  String
-  avatarUrl String?
-  telegram  String? // Telegram username or link
-  role      String   @default("STUDENT") // STUDENT, TEACHER, ADMIN, MODERATOR, ASSISTANT, CURATOR
-  language  String   @default("ru") // ru, en, uz, kk - язык интерфейса
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid())
+  firstName     String
+  lastName      String
+  phone         String   @unique
+  email         String?
+  password      String
+  avatarUrl     String?
+  telegram      String? // Telegram username or link
+  role          String   @default("STUDENT") // STUDENT, TEACHER, ADMIN, MODERATOR, ASSISTANT, CURATOR
+  language      String   @default("ru") // ru, en, uz, kk - язык интерфейса
+  isPaidTeacher Boolean  @default(false) // Оплачена ли регистрация учителя
+  coins         Int      @default(0) // Коины для геймификации
+  city          String? // Город
+  region        String? // Регион
+  country       String? // Страна
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
   coursesAsTeacher  Course[]            @relation("CourseTeacher")
@@ -43,6 +48,12 @@ model User {
   studentClasses ClassStudent[] @relation("StudentClasses")
   classMessages  ClassMessage[] @relation("ClassMessageSender")
 
+  // Intermediate tests
+  intermediateTestResults IntermediateTestResult[] @relation("IntermediateTestResults")
+
+  // Story views
+  storyViews StoryView[] @relation("StoryViews")
+
   @@map("users")
 }
 
@@ -62,12 +73,13 @@ model Course {
   updatedAt        DateTime @updatedAt
 
   // Relations
-  teacher        User                  @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
-  modules        Module[]
-  lessons        Lesson[]
-  studentCourses StudentCourse[]
-  flashcardDecks FlashcardDeck[]
-  integrations   ExternalIntegration[]
+  teacher           User                  @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  modules           Module[]
+  lessons           Lesson[]
+  studentCourses    StudentCourse[]
+  flashcardDecks    FlashcardDeck[]
+  integrations      ExternalIntegration[]
+  intermediateTests IntermediateTest[]
 
   @@map("courses")
 }
@@ -537,4 +549,145 @@ model ClassMessage {
   @@index([senderId])
   @@index([createdAt])
   @@map("class_messages")
+}
+
+// Промежуточные тесты
+model IntermediateTest {
+  id           String   @id @default(uuid())
+  courseId     String
+  title        String
+  description  String?
+  order        Int      @default(0)
+  passingScore Int      @default(70) // Процент для прохождения
+  timeLimit    Int? // Лимит времени в минутах (опционально)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course    Course                     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions IntermediateTestQuestion[]
+  results   IntermediateTestResult[]
+
+  @@index([courseId])
+  @@map("intermediate_tests")
+}
+
+model IntermediateTestQuestion {
+  id        String   @id @default(uuid())
+  testId    String
+  question  String
+  type      String   @default("SINGLE") // SINGLE, MULTIPLE, TEXT
+  order     Int      @default(0)
+  points    Int      @default(1)
+  createdAt DateTime @default(now())
+
+  test    IntermediateTest         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  options IntermediateTestOption[]
+  answers IntermediateTestAnswer[]
+
+  @@index([testId])
+  @@map("intermediate_test_questions")
+}
+
+model IntermediateTestOption {
+  id         String   @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  question IntermediateTestQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("intermediate_test_options")
+}
+
+model IntermediateTestResult {
+  id         String   @id @default(uuid())
+  testId     String
+  studentId  String
+  score      Int // Количество баллов
+  percentage Float // Процент правильных ответов
+  passed     Boolean // Прошел ли тест
+  timeSpent  Int? // Время прохождения в секундах
+  createdAt  DateTime @default(now())
+
+  test    IntermediateTest         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student User                     @relation("IntermediateTestResults", fields: [studentId], references: [id], onDelete: Cascade)
+  answers IntermediateTestAnswer[]
+
+  @@index([testId])
+  @@index([studentId])
+  @@map("intermediate_test_results")
+}
+
+model IntermediateTestAnswer {
+  id         String   @id @default(uuid())
+  resultId   String
+  questionId String
+  optionIds  String[] // ID выбранных опций (для множественного выбора)
+  textAnswer String? // Текстовый ответ (для текстовых вопросов)
+  isCorrect  Boolean
+  points     Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  result   IntermediateTestResult   @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  question IntermediateTestQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([resultId])
+  @@index([questionId])
+  @@map("intermediate_test_answers")
+}
+
+// Сторисы
+model Story {
+  id        String    @id @default(uuid())
+  title     String?
+  imageUrl  String
+  videoUrl  String?
+  link      String? // Ссылка при клике на сторис
+  isActive  Boolean   @default(true)
+  expiresAt DateTime? // Дата истечения сториса
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  views StoryView[]
+
+  @@index([isActive, expiresAt])
+  @@map("stories")
+}
+
+model StoryView {
+  id       String   @id @default(uuid())
+  storyId  String
+  userId   String
+  viewedAt DateTime @default(now())
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user  User  @relation("StoryViews", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, userId])
+  @@index([storyId])
+  @@index([userId])
+  @@map("story_views")
+}
+
+// Баннеры
+model Banner {
+  id        String    @id @default(uuid())
+  title     String?
+  imageUrl  String
+  link      String? // Ссылка при клике на баннер
+  position  String    @default("TOP") // TOP, BOTTOM, SIDEBAR
+  isActive  Boolean   @default(true)
+  order     Int       @default(0)
+  startDate DateTime? // Дата начала показа
+  endDate   DateTime? // Дата окончания показа
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isActive, position])
+  @@map("banners")
 }

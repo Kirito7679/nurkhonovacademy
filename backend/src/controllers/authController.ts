@@ -310,6 +310,8 @@ export const updateProfile = async (
       updateData.email = validatedData.email || null;
     }
     if (validatedData.language) updateData.language = validatedData.language;
+    // Note: city, region, country can be updated but not through this endpoint
+    // They should be set automatically via geolocation API
 
     const user = await prisma.user.update({
       where: { id: req.user!.id },

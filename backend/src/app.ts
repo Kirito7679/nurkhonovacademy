@@ -22,6 +22,9 @@ import classRoutes from './routes/classRoutes';
 import classChatRoutes from './routes/classChatRoutes';
 import curatorRoutes from './routes/curatorRoutes';
 import backupRoutes from './routes/backupRoutes';
+import intermediateTestRoutes from './routes/intermediateTestRoutes';
+import storyRoutes from './routes/storyRoutes';
+import bannerRoutes from './routes/bannerRoutes';
 import { errorHandler } from './utils/errors';
 import { ensureUploadDir } from './services/fileService';
 import { apiLimiter } from './middleware/rateLimit';
@@ -95,6 +98,9 @@ app.use('/api/classes', classRoutes);
 app.use('/api', classChatRoutes);
 app.use('/api/curators', curatorRoutes);
 app.use('/api/backups', backupRoutes);
+app.use('/api/tests', intermediateTestRoutes);
+app.use('/api/stories', storyRoutes);
+app.use('/api/banners', bannerRoutes);
 
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

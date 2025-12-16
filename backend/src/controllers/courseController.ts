@@ -246,6 +246,11 @@ export const createCourse = async (
   next: NextFunction
 ) => {
   try {
+    // Check if teacher has paid registration (if role is TEACHER)
+    if (req.user!.role === 'TEACHER' && !req.user!.isPaidTeacher) {
+      throw new AppError('Для создания курсов необходимо оплатить регистрацию учителя', 403);
+    }
+
     const validatedData = courseSchema.parse(req.body);
 
     const course = await prisma.course.create({
