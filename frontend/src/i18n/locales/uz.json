@@ -365,6 +365,17 @@
     "uploadError": "Faylni yuklashda xato",
     "deleteConfirm": "Bu faylni o'chirishni xohlaysizmi?"
   },
+  "curators": {
+    "title": "Kuratorlar",
+    "createCurator": "Kurator yaratish",
+    "noCurators": "Kuratorlar yo'q",
+    "curatorsNotFound": "Kuratorlar topilmadi",
+    "createFirstCurator": "Talabalarga yordam berish uchun birinchi kuratorni yarating",
+    "deleteConfirm": "Bu kuratorni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
+    "deleteTitle": "Kuratorni o'chirish",
+    "curator": "Kurator",
+    "management": "Kuratorlarni boshqarish (talaba yordamchilari)"
+  },
   "flashcards": {
     "title": "Flash kartalar",
     "createDeck": "Kartalar to'plamini yaratish",

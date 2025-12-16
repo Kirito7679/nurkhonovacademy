@@ -360,6 +360,17 @@
     "uploadError": "Error uploading file",
     "deleteConfirm": "Are you sure you want to delete this file?"
   },
+  "curators": {
+    "title": "Curators",
+    "createCurator": "Create Curator",
+    "noCurators": "No curators",
+    "curatorsNotFound": "Curators not found",
+    "createFirstCurator": "Create the first curator to help students",
+    "deleteConfirm": "Are you sure you want to delete this curator? This action cannot be undone.",
+    "deleteTitle": "Delete Curator",
+    "curator": "Curator",
+    "management": "Curator management (student assistants)"
+  },
   "flashcards": {
     "title": "Flashcards",
     "createDeck": "Create Deck",

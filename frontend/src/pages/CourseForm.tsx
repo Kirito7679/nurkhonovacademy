@@ -468,6 +468,17 @@ export default function CourseForm() {
                       ? <span className="flex items-center gap-2"><span className="animate-spin">⟳</span> <span>{t('common.loading')}</span></span>
                       : <span>{t('common.save')}</span>}
                   </button>
+                  {isEdit && (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteCourseConfirm(true)}
+                      disabled={deleteCourseMutation.isLoading}
+                      className="btn-secondary border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 className="h-5 w-5 mr-2" />
+                      {deleteCourseMutation.isLoading ? 'Удаление...' : 'Удалить курс'}
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
