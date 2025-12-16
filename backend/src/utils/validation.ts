@@ -32,6 +32,9 @@ export const courseSchema = z.object({
   price: z.number().min(0).default(0),
   trialLessonId: z.string().uuid().optional().or(z.literal('')),
   isVisible: z.boolean().optional().default(true),
+  language: z.enum(['ru', 'en', 'uz', 'kk']).optional().default('ru'),
+  subscriptionType: z.enum(['FREE', 'TRIAL', 'PAID']).optional(),
+  trialPeriodDays: z.number().int().min(0).optional(),
 });
 
 export const moduleSchema = z.object({

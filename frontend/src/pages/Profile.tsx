@@ -3,10 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { ApiResponse, User, ApiError } from '../types';
-import { User as UserIcon, Lock, Upload, Camera } from 'lucide-react';
+import { User as UserIcon, Lock, Upload, Camera, Globe } from 'lucide-react';
 import SuccessModal from '../components/SuccessModal';
 import FileUploadProgress from '../components/FileUploadProgress';
 
@@ -15,6 +16,7 @@ const profileSchema = z.object({
   lastName: z.string().min(1, 'Фамилия обязательна'),
   phone: z.string().min(10, 'Номер телефона должен содержать минимум 10 символов'),
   email: z.string().email('Неверный формат email').optional().or(z.literal('')),
+  language: z.string().optional(),
 });
 
 const passwordSchema = z.object({
@@ -30,6 +32,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
 export default function Profile() {
+  const { t, i18n } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -162,6 +165,7 @@ export default function Profile() {
       lastName: userResponse?.lastName || '',
       phone: userResponse?.phone || '',
       email: userResponse?.email || '',
+      language: userResponse?.language || i18n.language || 'ru',
     },
   });
 
@@ -174,8 +178,13 @@ export default function Profile() {
     resolver: zodResolver(passwordSchema),
   });
 
-  const onSubmitProfile = (data: ProfileFormData) => {
+  const onSubmitProfile = async (data: ProfileFormData) => {
     updateProfileMutation.mutate(data);
+    // Change language if it was updated
+    if (data.language && data.language !== i18n.language) {
+      await i18n.changeLanguage(data.language);
+      localStorage.setItem('i18nextLng', data.language);
+    }
   };
 
   const onSubmitPassword = (data: PasswordFormData) => {
@@ -338,6 +347,25 @@ export default function Profile() {
             />
             {profileErrors.email && (
               <p className="mt-1 text-sm text-red-600">{profileErrors.email.message}</p>
+            )}
+          </div>
+
+          <div className="animate-slide-in" style={{ animationDelay: '0.55s' }}>
+            <label htmlFor="language" className="block text-sm font-medium text-neutral-700 mb-2">
+              <Globe className="h-4 w-4 inline mr-2" />
+              Язык интерфейса
+            </label>
+            <select
+              {...registerProfile('language')}
+              className="input-field"
+            >
+              <option value="ru">🇷🇺 Русский</option>
+              <option value="en">🇺🇸 English</option>
+              <option value="uz">🇺🇿 O'zbek</option>
+              <option value="kk">🇰🇿 Қазақша</option>
+            </select>
+            {profileErrors.language && (
+              <p className="mt-1 text-sm text-red-600">{profileErrors.language.message}</p>
             )}
           </div>
 

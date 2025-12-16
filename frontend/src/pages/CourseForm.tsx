@@ -18,6 +18,9 @@ const courseSchema = z.object({
   price: z.number().min(0).default(0),
   trialLessonId: z.string().uuid().optional().or(z.literal('')),
   isVisible: z.boolean().default(true),
+  language: z.enum(['ru', 'en', 'uz', 'kk']).default('ru'),
+  subscriptionType: z.enum(['FREE', 'TRIAL', 'PAID']).optional(),
+  trialPeriodDays: z.number().int().min(0).optional(),
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
@@ -161,19 +164,25 @@ export default function CourseForm() {
       price: 0,
       trialLessonId: '',
       isVisible: true,
+      language: 'ru',
+      subscriptionType: undefined,
+      trialPeriodDays: undefined,
     },
   });
 
   useEffect(() => {
-    if (courseResponse && isEdit && !hasResetRef.current) {
-      reset({
-        title: courseResponse.title,
-        description: courseResponse.description || '',
-        thumbnailUrl: courseResponse.thumbnailUrl || '',
-        price: courseResponse.price,
-        trialLessonId: courseResponse.trialLessonId || '',
-        isVisible: courseResponse.isVisible !== undefined ? courseResponse.isVisible : true,
-      });
+      if (courseResponse && isEdit && !hasResetRef.current) {
+        reset({
+          title: courseResponse.title,
+          description: courseResponse.description || '',
+          thumbnailUrl: courseResponse.thumbnailUrl || '',
+          price: courseResponse.price,
+          trialLessonId: courseResponse.trialLessonId || '',
+          isVisible: courseResponse.isVisible !== undefined ? courseResponse.isVisible : true,
+          language: courseResponse.language || 'ru',
+          subscriptionType: courseResponse.subscriptionType || undefined,
+          trialPeriodDays: courseResponse.trialPeriodDays || undefined,
+        });
       if (courseResponse.thumbnailUrl) {
         setThumbnailPreview(courseResponse.thumbnailUrl);
       }
@@ -437,6 +446,66 @@ export default function CourseForm() {
                   </label>
                 </div>
               </div>
+
+              <div className="animate-slide-in" style={{ animationDelay: '0.48s' }}>
+                <label htmlFor="language" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Язык курса <span className="text-red-500">*</span>
+                </label>
+                <select
+                  {...register('language')}
+                  className="input-field"
+                >
+                  <option value="ru">🇷🇺 Русский</option>
+                  <option value="en">🇺🇸 English</option>
+                  <option value="uz">🇺🇿 O'zbek</option>
+                  <option value="kk">🇰🇿 Қазақша</option>
+                </select>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Курс будет виден только студентам с выбранным языком интерфейса
+                </p>
+                {errors.language && (
+                  <p className="mt-1 text-sm text-red-600">{errors.language.message}</p>
+                )}
+              </div>
+
+              <div className="animate-slide-in" style={{ animationDelay: '0.49s' }}>
+                <label htmlFor="subscriptionType" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Тип подписки <span className="text-neutral-500 text-xs">(необязательно)</span>
+                </label>
+                <select
+                  {...register('subscriptionType')}
+                  className="input-field"
+                >
+                  <option value="">Не выбран</option>
+                  <option value="FREE">Бесплатный</option>
+                  <option value="TRIAL">С пробным периодом</option>
+                  <option value="PAID">Платный</option>
+                </select>
+                {errors.subscriptionType && (
+                  <p className="mt-1 text-sm text-red-600">{errors.subscriptionType.message}</p>
+                )}
+              </div>
+
+              {watch('subscriptionType') === 'TRIAL' && (
+                <div className="animate-slide-in" style={{ animationDelay: '0.495s' }}>
+                  <label htmlFor="trialPeriodDays" className="block text-sm font-medium text-neutral-700 mb-2">
+                    Пробный период (дней) <span className="text-neutral-500 text-xs">(необязательно)</span>
+                  </label>
+                  <input
+                    {...register('trialPeriodDays', { valueAsNumber: true })}
+                    type="number"
+                    min="0"
+                    className="input-field"
+                    placeholder="7"
+                  />
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Количество дней бесплатного доступа к курсу
+                  </p>
+                  {errors.trialPeriodDays && (
+                    <p className="mt-1 text-sm text-red-600">{errors.trialPeriodDays.message}</p>
+                  )}
+                </div>
+              )}
 
               {isEdit && lessons.length > 0 && (
                 <div className="animate-slide-in" style={{ animationDelay: '0.5s' }}>

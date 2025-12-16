@@ -49,6 +49,9 @@ export interface Course {
   trialLessonId?: string | null;
   teacherId: string;
   isVisible?: boolean;
+  language?: SupportedLanguage;
+  subscriptionType?: 'FREE' | 'TRIAL' | 'PAID' | null;
+  trialPeriodDays?: number | null;
   createdAt: string;
   updatedAt: string;
   teacher?: {

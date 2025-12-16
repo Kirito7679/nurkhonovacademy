@@ -39,6 +39,7 @@ export const getAllCourses = async (
     }
 
     // For students, filter by visibility: show visible courses OR courses assigned to them
+    // Also filter by language: only show courses matching student's language preference
     if (req.user.role === 'STUDENT') {
       const studentCourses = await prisma.studentCourse.findMany({
         where: {
@@ -50,16 +51,20 @@ export const getAllCourses = async (
       });
 
       const assignedCourseIds = studentCourses.map((sc) => sc.courseId);
+      const userLanguage = req.user.language || 'ru';
 
-      // Show courses where isVisible = true OR where student is assigned
+      // Show courses where:
+      // 1. isVisible = true AND language matches user's language
+      // 2. OR student is assigned (regardless of language)
       if (assignedCourseIds.length > 0) {
         where.OR = [
-          { isVisible: true },
+          { isVisible: true, language: userLanguage },
           { id: { in: assignedCourseIds } },
         ];
       } else {
-        // If no assigned courses, only show visible ones
+        // If no assigned courses, only show visible ones matching language
         where.isVisible = true;
+        where.language = userLanguage;
       }
     }
 
@@ -249,6 +254,9 @@ export const createCourse = async (
         teacherId: req.user!.id,
         trialLessonId: validatedData.trialLessonId || null,
         isVisible: validatedData.isVisible !== undefined ? validatedData.isVisible : true,
+        language: validatedData.language || 'ru',
+        subscriptionType: validatedData.subscriptionType || null,
+        trialPeriodDays: validatedData.trialPeriodDays || null,
       },
       include: {
         teacher: {

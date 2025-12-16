@@ -47,16 +47,19 @@ model User {
 }
 
 model Course {
-  id            String   @id @default(uuid())
-  title         String
-  description   String?
-  thumbnailUrl  String?
-  price         Float    @default(0)
-  trialLessonId String?
-  teacherId     String
-  isVisible     Boolean  @default(true) // Видим ли курс для студентов (если false, виден только назначенным студентам)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(uuid())
+  title            String
+  description      String?
+  thumbnailUrl     String?
+  price            Float    @default(0)
+  trialLessonId    String?
+  teacherId        String
+  isVisible        Boolean  @default(true) // Видим ли курс для студентов (если false, виден только назначенным студентам)
+  language         String   @default("ru") // ru, en, uz, kk - язык курса
+  subscriptionType String? // FREE, TRIAL, PAID - тип подписки
+  trialPeriodDays  Int? // Количество дней пробного периода
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
   teacher        User                  @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
