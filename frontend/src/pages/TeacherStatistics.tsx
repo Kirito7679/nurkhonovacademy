@@ -560,11 +560,16 @@ export default function TeacherStatistics() {
                 }}
                 style={{ width: '100%', height: '500px' }}
               >
-                <Geographies geography="https://raw.githubusercontent.com/deldersveld/topojson/master/world-countries.json">
+                <Geographies geography="https://cdn.jsdelivr.net/npm/world-atlas@3/countries-110m.json">
                   {({ geographies }) =>
                     geographies.map((geo) => {
+                      // world-atlas использует другие свойства: NAME_LONG, ISO_A2, ISO_A3
                       const countryData = studentsByCountryData.data.find(
-                        (item) => item.code === geo.properties.ISO_A2 || item.name === geo.properties.NAME
+                        (item) => 
+                          item.code === geo.properties.ISO_A2 || 
+                          item.code === geo.properties.ISO_A3 ||
+                          item.name === geo.properties.NAME ||
+                          item.name === geo.properties.NAME_LONG
                       );
                       const studentCount = countryData?.value || 0;
                       const fillColor = studentCount > 0 
