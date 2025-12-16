@@ -58,13 +58,22 @@ export default function CourseDetails() {
   const { data: testsResponse } = useQuery(
     ['tests', id],
     async () => {
-      const response = await api.get<ApiResponse<IntermediateTest[]>>(`/tests/courses/${id}/tests`);
-      return response.data.data || [];
+      try {
+        const response = await api.get<ApiResponse<IntermediateTest[]>>(`/tests/courses/${id}/tests`);
+        return response.data.data || [];
+      } catch (error: any) {
+        // Если 403 - нет доступа, это нормально, возвращаем пустой массив
+        if (error.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
     {
       staleTime: 5 * 60 * 1000,
       cacheTime: 10 * 60 * 1000,
       enabled: !!id && courseResponse?.hasAccess,
+      retry: false, // Не повторять запрос при ошибке доступа
     }
   );
 
