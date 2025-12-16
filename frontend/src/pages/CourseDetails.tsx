@@ -64,7 +64,7 @@ export default function CourseDetails() {
     {
       staleTime: 5 * 60 * 1000,
       cacheTime: 10 * 60 * 1000,
-      enabled: !!id && course?.hasAccess,
+      enabled: !!id && courseResponse?.hasAccess,
     }
   );
 
