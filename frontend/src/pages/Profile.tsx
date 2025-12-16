@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import { ApiResponse, User, ApiError } from '../types';
 import { User as UserIcon, Lock, Upload, Camera } from 'lucide-react';
 import SuccessModal from '../components/SuccessModal';
+import FileUploadProgress from '../components/FileUploadProgress';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'Имя обязательно'),
@@ -33,6 +34,7 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUploadProgress, setAvatarUploadProgress] = useState<{ fileName: string; progress: number } | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalTitle, setSuccessModalTitle] = useState('');
   const [successModalMessage, setSuccessModalMessage] = useState('');
@@ -91,7 +93,14 @@ export default function Profile() {
       const formData = new FormData();
       formData.append('avatar', file);
       
-      const response = await api.post<ApiResponse<User>>('/auth/me/avatar', formData);
+      const response = await api.post<ApiResponse<User>>('/auth/me/avatar', formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setAvatarUploadProgress({ fileName: file.name, progress });
+          }
+        },
+      });
       return response.data.data;
     },
     {
@@ -107,10 +116,12 @@ export default function Profile() {
           setErrorMessage('');
         }
         setUploadingAvatar(false);
+        setAvatarUploadProgress(null);
       },
       onError: (err: any) => {
         setErrorMessage(err.response?.data?.message || 'Ошибка при загрузке фото');
         setUploadingAvatar(false);
+        setAvatarUploadProgress(null);
       },
     }
   );
@@ -243,19 +254,29 @@ export default function Profile() {
             />
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-base md:text-xl font-semibold text-neutral-900 break-words">
+            <h2 className="text-base md:text-xl font-semibold text-neutral-900 dark:text-neutral-100 break-words">
               {userResponse?.firstName} {userResponse?.lastName}
             </h2>
-            <p className="text-sm md:text-base text-neutral-600 break-words">
+            <p className="text-sm md:text-base text-neutral-600 dark:text-neutral-400 break-words">
               {userResponse?.phone}
             </p>
-            <label
-              htmlFor="avatar-upload-input"
-              className={`mt-2 flex items-center gap-2 text-sm text-neutral-600 hover:text-primary-600 transition-colors cursor-pointer ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <Upload className="h-4 w-4" />
-              <span>{uploadingAvatar ? 'Загрузка...' : 'Загрузить фото'}</span>
-            </label>
+            {avatarUploadProgress && (
+              <div className="mt-2">
+                <FileUploadProgress
+                  fileName={avatarUploadProgress.fileName}
+                  progress={avatarUploadProgress.progress}
+                />
+              </div>
+            )}
+            {!avatarUploadProgress && (
+              <label
+                htmlFor="avatar-upload-input"
+                className={`mt-2 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Upload className="h-4 w-4" />
+                <span>{uploadingAvatar ? 'Загрузка...' : 'Загрузить фото'}</span>
+              </label>
+            )}
           </div>
         </div>
 

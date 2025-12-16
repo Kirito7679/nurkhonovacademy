@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { ApiResponse, FlashcardDeck } from '../types';
-import { Plus, BookOpen, Eye, Edit2, Trash2, Lock } from 'lucide-react';
+import { Plus, BookOpen, Eye, Edit2, Trash2, Lock, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import ErrorModal from '../components/ErrorModal';
 import ConfirmModal from '../components/ConfirmModal';
+import FlashcardAnalytics from '../components/FlashcardAnalytics';
 
 export default function FlashcardDecks() {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ export default function FlashcardDecks() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newDeckTitle, setNewDeckTitle] = useState('');
   const [newDeckDescription, setNewDeckDescription] = useState('');
+  const [selectedDeckForAnalytics, setSelectedDeckForAnalytics] = useState<string | null>(null);
   
   // Modal states
   const [errorModal, setErrorModal] = useState({ isOpen: false, message: '' });
@@ -225,6 +227,13 @@ export default function FlashcardDecks() {
                 >
                   {t('flashcards.study')}
                 </Link>
+                <button
+                  onClick={() => setSelectedDeckForAnalytics(selectedDeckForAnalytics === deck.id ? null : deck.id)}
+                  className="btn-secondary"
+                  title="Аналитика"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </button>
                 {canCreate && deck.createdBy === user?.id && (
                   <>
                     <Link
@@ -242,6 +251,11 @@ export default function FlashcardDecks() {
                   </>
                 )}
               </div>
+              {selectedDeckForAnalytics === deck.id && (
+                <div className="mt-4">
+                  <FlashcardAnalytics deckId={deck.id} />
+                </div>
+              )}
             </div>
           ))}
         </div>

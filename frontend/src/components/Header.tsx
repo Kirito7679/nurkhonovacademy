@@ -1,16 +1,18 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Moon, Sun } from 'lucide-react';
 import { Role } from '../types';
 import NotificationBell from './NotificationBell';
 import Logo from './Logo';
 import LanguageToggle from './LanguageToggle';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Header() {
   const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -27,24 +29,20 @@ export default function Header() {
             to={isTeacher ? '/teacher/dashboard' : '/dashboard'} 
             className="text-lg md:text-xl font-bold text-gradient animate-slide-in flex items-center gap-2 hover:opacity-90 transition-opacity"
           >
-            <div className="relative flex items-center justify-center">
-              <Logo className="w-10 h-10" variant="icon" />
-            </div>
-            <div className="hidden sm:flex items-center gap-1">
-              <span className="font-extrabold bg-gradient-to-r from-primary-600 via-education-600 to-accent-600 bg-clip-text text-transparent">
-                Nurkhonov_
-              </span>
-              <span className="text-primary-700 font-semibold">Academy</span>
-            </div>
-            <span className="sm:hidden font-extrabold bg-gradient-to-r from-primary-600 via-education-600 to-accent-600 bg-clip-text text-transparent">
-              N_
-            </span>
+            <Logo className="h-8 md:h-10" />
           </Link>
           
           <div className="flex items-center gap-2 md:gap-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/50 transition-all duration-200"
+              title={theme === 'light' ? 'Переключить на темную тему' : 'Переключить на светлую тему'}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
             <LanguageToggle />
             <NotificationBell />
-            <div className="hidden md:flex items-center gap-2 text-primary-800 animate-fade-scale bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-200">
+            <div className="hidden md:flex items-center gap-2 text-primary-800 dark:text-primary-200 animate-fade-scale bg-primary-50 dark:bg-neutral-800 px-3 py-1.5 rounded-lg border border-primary-200 dark:border-neutral-700">
               <div className="relative">
                 <User size={20} className="text-primary-600" />
               </div>

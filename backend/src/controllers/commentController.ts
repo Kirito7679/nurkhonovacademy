@@ -33,9 +33,11 @@ export const getLessonComments = async (
       throw new AppError('Урок не найден', 404);
     }
 
-    // Check access
+    // Check access - all roles need to have access to the lesson
     let hasAccess = false;
+    
     if (req.user?.role === 'STUDENT') {
+      // Students need approved access or trial lesson access
       const studentCourse = await prisma.studentCourse.findUnique({
         where: {
           studentId_courseId: {
@@ -45,8 +47,9 @@ export const getLessonComments = async (
         },
       });
       hasAccess = studentCourse?.status === 'APPROVED' || lesson.course.trialLessonId === lessonId;
-    } else if (req.user?.role === 'TEACHER' || req.user?.role === 'ADMIN') {
-      hasAccess = lesson.course.teacherId === req.user.id || req.user.role === 'ADMIN';
+    } else if (req.user?.role === 'TEACHER' || req.user?.role === 'ADMIN' || req.user?.role === 'MODERATOR' || req.user?.role === 'ASSISTANT') {
+      // Teachers, admins, moderators, and assistants have access if they own the course or are admin/moderator
+      hasAccess = lesson.course.teacherId === req.user.id || req.user.role === 'ADMIN' || req.user.role === 'MODERATOR';
     }
 
     if (!hasAccess) {
@@ -154,8 +157,11 @@ export const createComment = async (
       throw new AppError('Урок не найден', 404);
     }
 
-    // Check access for students
-    if (req.user!.role === 'STUDENT' && !validatedData.parentId) {
+    // Check access - all roles need to have access to the lesson
+    let hasAccess = false;
+    
+    if (req.user!.role === 'STUDENT') {
+      // Students need approved access or trial lesson access
       const studentCourse = await prisma.studentCourse.findUnique({
         where: {
           studentId_courseId: {
@@ -164,10 +170,14 @@ export const createComment = async (
           },
         },
       });
-      const hasAccess = studentCourse?.status === 'APPROVED' || lesson.course.trialLessonId === lessonId;
-      if (!hasAccess) {
-        throw new AppError('У вас нет доступа к этому уроку', 403);
-      }
+      hasAccess = studentCourse?.status === 'APPROVED' || lesson.course.trialLessonId === lessonId;
+    } else if (req.user!.role === 'TEACHER' || req.user!.role === 'ADMIN' || req.user!.role === 'MODERATOR') {
+      // Teachers, admins, and moderators have access if they own the course or are admin
+      hasAccess = lesson.course.teacherId === req.user!.id || req.user!.role === 'ADMIN' || req.user!.role === 'MODERATOR';
+    }
+    
+    if (!hasAccess) {
+      throw new AppError('У вас нет доступа к этому уроку', 403);
     }
 
     // If it's a reply, check if parent comment exists

@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-gradient-to-br from-neutral-50 via-blue-50/30 to-emerald-50/20 text-neutral-900 antialiased;
+    @apply bg-gradient-to-br from-neutral-50 via-primary-50/30 to-primary-50/20 dark:from-neutral-900 dark:via-neutral-800/50 dark:to-neutral-900 text-neutral-900 dark:text-neutral-100 antialiased;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
         'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
         sans-serif;

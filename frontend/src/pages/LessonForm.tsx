@@ -17,6 +17,7 @@ import ErrorModal from '../components/ErrorModal';
 import SuccessModal from '../components/SuccessModal';
 import ConfirmModal from '../components/ConfirmModal';
 import ExerciseEditModal from '../components/ExerciseEditModal';
+import FileUploadProgress from '../components/FileUploadProgress';
 
 const lessonSchema = z.object({
   courseId: z.string().uuid('Неверный ID курса'),
@@ -24,7 +25,21 @@ const lessonSchema = z.object({
   title: z.string().min(1, 'Название урока обязательно'),
   description: z.string().optional(),
   order: z.number().int().min(0).default(0),
-  videoUrl: z.string().url('Неверный формат URL').optional().or(z.literal('')),
+  videoUrl: z.string()
+    .optional()
+    .or(z.literal(''))
+    .refine((val) => {
+      if (!val || val === '') return true; // Empty is valid
+      // Allow URLs (http/https) or file paths from uploads
+      if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/api/files/')) {
+        return true;
+      }
+      // Allow Supabase and Cloudinary URLs
+      if (val.includes('supabase.co') || val.includes('cloudinary.com')) {
+        return true;
+      }
+      return false;
+    }, { message: 'Введите валидный URL или загрузите видео файл' }),
 });
 
 type LessonFormData = z.infer<typeof lessonSchema>;
@@ -38,6 +53,10 @@ export default function LessonForm() {
   const isEdit = !!lessonId;
   const moduleIdFromUrl = searchParams.get('moduleId') || '';
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [fileUploadProgress, setFileUploadProgress] = useState<{ fileName: string; progress: number } | null>(null);
+  const [videoUploadProgress, setVideoUploadProgress] = useState<{ fileName: string; progress: number } | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [showQuizSection, setShowQuizSection] = useState(false);
   const [quizTitle, setQuizTitle] = useState('');
   const [quizDescription, setQuizDescription] = useState('');
@@ -565,6 +584,7 @@ export default function LessonForm() {
     if (!file || !lessonId) return;
 
     setUploadingFile(true);
+    setFileUploadProgress({ fileName: file.name, progress: 0 });
     const formData = new FormData();
     formData.append('file', file);
     formData.append('lessonId', lessonId);
@@ -574,16 +594,100 @@ export default function LessonForm() {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setFileUploadProgress({ fileName: file.name, progress });
+          }
+        },
       });
       queryClient.invalidateQueries(['lessonFiles', lessonId]);
+      setFileUploadProgress(null);
     } catch (error: ApiError) {
       setErrorModal({
         isOpen: true,
         title: t('common.error', { defaultValue: 'Ошибка' }),
         message: error.response?.data?.message || 'Ошибка при загрузке файла',
       });
+      setFileUploadProgress(null);
     } finally {
       setUploadingFile(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if it's a video file
+    const videoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv', 'video/x-flv', 'video/mpeg'];
+    if (!videoTypes.includes(file.type) && !file.name.match(/\.(mp4|webm|ogg|mov|avi|wmv|flv|mpeg|mpg)$/i)) {
+      setErrorModal({
+        isOpen: true,
+        title: t('common.error', { defaultValue: 'Ошибка' }),
+        message: 'Пожалуйста, выберите видео файл (MP4, WebM, MOV, AVI и т.д.)',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    // Check file size (max 500MB for videos)
+    if (file.size > 500 * 1024 * 1024) {
+      setErrorModal({
+        isOpen: true,
+        title: t('common.error', { defaultValue: 'Ошибка' }),
+        message: 'Размер видео файла не должен превышать 500 MB',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingVideo(true);
+    setVideoUploadProgress({ fileName: file.name, progress: 0 });
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // If lesson exists, upload as lesson file and use its URL
+    if (lessonId) {
+      formData.append('lessonId', lessonId);
+    }
+
+    try {
+      const response = await api.post<ApiResponse<{ fileUrl: string; fileName: string }>>('/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setVideoUploadProgress({ fileName: file.name, progress });
+          }
+        },
+      });
+      
+      // Set video URL in the form
+      if (response.data.data?.fileUrl) {
+        setValue('videoUrl', response.data.data.fileUrl);
+        if (lessonId) {
+          queryClient.invalidateQueries(['lessonFiles', lessonId]);
+        }
+        setSuccessModal({
+          isOpen: true,
+          title: t('common.success', { defaultValue: 'Успешно' }),
+          message: 'Видео успешно загружено! Не забудьте сохранить урок.',
+        });
+      }
+      setVideoUploadProgress(null);
+    } catch (error: ApiError) {
+      setErrorModal({
+        isOpen: true,
+        title: t('common.error', { defaultValue: 'Ошибка' }),
+        message: error.response?.data?.message || 'Ошибка при загрузке видео',
+      });
+      setVideoUploadProgress(null);
+    } finally {
+      setUploadingVideo(false);
       e.target.value = '';
     }
   };
@@ -873,27 +977,85 @@ export default function LessonForm() {
 
               <div className="animate-slide-in" style={{ animationDelay: '0.5s' }}>
                 <label htmlFor="videoUrl" className="block text-sm font-medium text-neutral-700 mb-2">
-                  URL видео
+                  Видео урока
                 </label>
-                <input
-                  {...register('videoUrl')}
-                  type="url"
-                  placeholder="YouTube, Vimeo, Google Drive, VK или прямая ссылка на видео"
-                  className="input-field"
-                />
-                {errors.videoUrl && (
-                  <p className="mt-1 text-sm text-red-600">{errors.videoUrl.message}</p>
+                
+                {/* Video Upload Progress */}
+                {videoUploadProgress && (
+                  <FileUploadProgress
+                    fileName={videoUploadProgress.fileName}
+                    progress={videoUploadProgress.progress}
+                    onCancel={() => {
+                      setUploadingVideo(false);
+                      setVideoUploadProgress(null);
+                      if (videoInputRef.current) videoInputRef.current.value = '';
+                    }}
+                  />
                 )}
-                <p className="mt-1 text-sm text-neutral-500">
-                  Поддерживаются: YouTube, Vimeo, Google Drive, VK и прямые ссылки на видео (mp4, webm и т.д.)
-                </p>
-                <div className="mt-2 text-xs text-neutral-400 space-y-1">
-                  <p>Примеры:</p>
-                  <p>• YouTube: https://www.youtube.com/watch?v=...</p>
-                  <p>• Vimeo: https://vimeo.com/123456789</p>
-                  <p>• Google Drive: https://drive.google.com/file/d/FILE_ID/view</p>
-                  <p>• VK: https://vk.com/video-123456789_123456789</p>
-                  <p>• Прямая ссылка: https://example.com/video.mp4</p>
+
+                {/* Video Upload Button */}
+                <div className="mb-3">
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-ms-wmv,video/x-flv,video/mpeg,.mp4,.webm,.ogg,.mov,.avi,.wmv,.flv,.mpeg,.mpg"
+                    onChange={handleVideoUpload}
+                    disabled={uploadingVideo}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => videoInputRef.current?.click()}
+                    disabled={uploadingVideo}
+                    className="w-full px-4 py-2 border-2 border-dashed border-primary-300 rounded-lg hover:border-primary-500 cursor-pointer transition-all hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Upload className="h-5 w-5 text-primary-500" />
+                    {uploadingVideo ? (
+                      <span className="flex items-center gap-2">
+                        <span className="animate-spin">⟳</span>
+                        <span>Загрузка видео...</span>
+                      </span>
+                    ) : (
+                      <span>Загрузить видео с компьютера (MP4, WebM, MOV, AVI и т.д.)</span>
+                    )}
+                  </button>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Максимальный размер: 500 MB. Поддерживаются: MP4, WebM, MOV, AVI, WMV, FLV, MPEG
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 border-t border-neutral-300"></div>
+                  <span className="text-xs text-neutral-500">или</span>
+                  <div className="flex-1 border-t border-neutral-300"></div>
+                </div>
+
+                {/* URL Input */}
+                <div>
+                  <label htmlFor="videoUrl" className="block text-sm font-medium text-neutral-700 mb-2">
+                    Или введите URL видео
+                  </label>
+                  <input
+                    {...register('videoUrl')}
+                    type="url"
+                    placeholder="YouTube, Vimeo, Google Drive, VK или прямая ссылка на видео"
+                    className="input-field"
+                  />
+                  {errors.videoUrl && (
+                    <p className="mt-1 text-sm text-red-600">{errors.videoUrl.message}</p>
+                  )}
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Поддерживаются: YouTube, Vimeo, Google Drive, VK и прямые ссылки на видео (mp4, webm и т.д.)
+                  </p>
+                  <div className="mt-2 text-xs text-neutral-400 space-y-1">
+                    <p>Примеры:</p>
+                    <p>• YouTube: https://www.youtube.com/watch?v=...</p>
+                    <p>• Vimeo: https://vimeo.com/123456789</p>
+                    <p>• Google Drive: https://drive.google.com/file/d/FILE_ID/view</p>
+                    <p>• VK: https://vk.com/video-123456789_123456789</p>
+                    <p>• Прямая ссылка: https://example.com/video.mp4</p>
+                  </div>
                 </div>
               </div>
 
@@ -1161,8 +1323,21 @@ export default function LessonForm() {
 
             {/* Files Section */}
             <div className="card p-6">
-              <h2 className="text-xl font-semibold text-neutral-900 mb-4">
+              <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
                 Файлы урока
+              </h2>
+
+              {/* File Upload Progress */}
+              {fileUploadProgress && (
+                <FileUploadProgress
+                  fileName={fileUploadProgress.fileName}
+                  progress={fileUploadProgress.progress}
+                  onCancel={() => {
+                    setUploadingFile(false);
+                    setFileUploadProgress(null);
+                  }}
+                />
+              )}
               </h2>
               
               <div className="mb-4">

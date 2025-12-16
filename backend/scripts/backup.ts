@@ -2,128 +2,118 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
-import prisma from '../src/config/database';
+import * as dotenv from 'dotenv';
 
 const execAsync = promisify(exec);
+dotenv.config();
 
-interface BackupOptions {
-  outputDir?: string;
-  includeData?: boolean;
-  compress?: boolean;
+interface BackupConfig {
+  backupDir: string;
+  maxBackups: number;
+  databaseUrl: string;
 }
 
-export async function createBackup(options: BackupOptions = {}) {
-  const {
-    outputDir = path.join(process.cwd(), 'backups'),
-    includeData = true,
-    compress = true,
-  } = options;
-
-  // Ensure output directory exists
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupName = `backup-${timestamp}`;
-  const backupPath = path.join(outputDir, backupName);
-
+async function createBackup() {
   try {
-    console.log('Creating backup...');
-
-    // Create backup directory
-    fs.mkdirSync(backupPath, { recursive: true });
-
-    // Export database schema
-    console.log('Exporting schema...');
-    const schemaPath = path.join(backupPath, 'schema.prisma');
-    const originalSchema = path.join(process.cwd(), 'prisma', 'schema.prisma');
-    fs.copyFileSync(originalSchema, schemaPath);
-
-    // Export data if SQLite
-    const dbUrl = process.env.DATABASE_URL || '';
-    if (dbUrl.startsWith('file:') && includeData) {
-      console.log('Exporting database data...');
-      const dbPath = dbUrl.replace('file:', '');
-      const dbBackupPath = path.join(backupPath, 'database.db');
-      fs.copyFileSync(dbPath, dbBackupPath);
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL not found in environment variables');
     }
 
-    // Export migrations
-    console.log('Exporting migrations...');
-    const migrationsPath = path.join(backupPath, 'migrations');
-    const originalMigrations = path.join(process.cwd(), 'prisma', 'migrations');
-    if (fs.existsSync(originalMigrations)) {
-      fs.mkdirSync(migrationsPath, { recursive: true });
-      copyDirectory(originalMigrations, migrationsPath);
+    // Parse database URL to get connection details
+    const url = new URL(databaseUrl);
+    const dbName = url.pathname.slice(1).split('?')[0];
+    const dbUser = url.username;
+    const dbPassword = url.password;
+    const dbHost = url.hostname;
+    const dbPort = url.port || '5432';
+
+    // Create backups directory
+    const backupDir = path.join(process.cwd(), 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
     }
 
-    // Create metadata file
-    const metadata = {
+    // Generate backup filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const backupFileName = `backup-${dbName}-${timestamp}.sql`;
+    const backupPath = path.join(backupDir, backupFileName);
+
+    // Set PGPASSWORD environment variable for pg_dump
+    const env = { ...process.env, PGPASSWORD: dbPassword };
+
+    // Create pg_dump command
+    const pgDumpCommand = `pg_dump -h ${dbHost} -p ${dbPort} -U ${dbUser} -d ${dbName} -F c -f "${backupPath}"`;
+
+    console.log('Creating database backup...');
+    console.log(`Database: ${dbName}`);
+    console.log(`Backup file: ${backupFileName}`);
+
+    // Execute pg_dump
+    await execAsync(pgDumpCommand, { env });
+
+    // Get file size
+    const stats = fs.statSync(backupPath);
+    const fileSize = stats.size;
+
+    console.log(`✅ Backup created successfully!`);
+    console.log(`   File: ${backupFileName}`);
+    console.log(`   Size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`   Path: ${backupPath}`);
+
+    // Cleanup old backups (keep only last N backups)
+    const maxBackups = parseInt(process.env.MAX_BACKUPS || '10');
+    cleanupOldBackups(backupDir, maxBackups);
+
+    return {
+      success: true,
+      fileName: backupFileName,
+      filePath: backupPath,
+      fileSize,
       timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      database: dbUrl.includes('postgresql') ? 'postgresql' : 'sqlite',
     };
-    fs.writeFileSync(
-      path.join(backupPath, 'metadata.json'),
-      JSON.stringify(metadata, null, 2)
-    );
-
-    // Compress if requested
-    if (compress) {
-      console.log('Compressing backup...');
-      const zipPath = `${backupPath}.zip`;
-      if (process.platform === 'win32') {
-        // Windows - requires PowerShell
-        await execAsync(
-          `powershell Compress-Archive -Path "${backupPath}" -DestinationPath "${zipPath}"`
-        );
-      } else {
-        // Unix-like systems
-        await execAsync(`cd "${outputDir}" && zip -r "${backupName}.zip" "${backupName}"`);
-      }
-      // Remove uncompressed directory
-      fs.rmSync(backupPath, { recursive: true, force: true });
-      console.log(`Backup created: ${zipPath}`);
-      return zipPath;
-    }
-
-    console.log(`Backup created: ${backupPath}`);
-    return backupPath;
   } catch (error) {
-    console.error('Error creating backup:', error);
+    console.error('❌ Error creating backup:', error);
     throw error;
   }
 }
 
-function copyDirectory(src: string, dest: string) {
-  if (!fs.existsSync(dest)) {
-    fs.mkdirSync(dest, { recursive: true });
-  }
+function cleanupOldBackups(backupDir: string, maxBackups: number) {
+  try {
+    const files = fs.readdirSync(backupDir)
+      .filter(file => file.startsWith('backup-') && file.endsWith('.sql'))
+      .map(file => ({
+        name: file,
+        path: path.join(backupDir, file),
+        time: fs.statSync(path.join(backupDir, file)).mtime.getTime(),
+      }))
+      .sort((a, b) => b.time - a.time); // Sort by modification time, newest first
 
-  const entries = fs.readdirSync(src, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-
-    if (entry.isDirectory()) {
-      copyDirectory(srcPath, destPath);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
+    // Remove old backups if we exceed maxBackups
+    if (files.length > maxBackups) {
+      const filesToDelete = files.slice(maxBackups);
+      console.log(`Cleaning up ${filesToDelete.length} old backup(s)...`);
+      filesToDelete.forEach(file => {
+        fs.unlinkSync(file.path);
+        console.log(`   Deleted: ${file.name}`);
+      });
     }
+  } catch (error) {
+    console.error('Error cleaning up old backups:', error);
   }
 }
 
-// CLI usage
+// Run if called directly
 if (require.main === module) {
   createBackup()
-    .then((backupPath) => {
-      console.log(`✅ Backup completed: ${backupPath}`);
+    .then(() => {
+      console.log('Backup process completed');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('❌ Backup failed:', error);
+      console.error('Backup process failed:', error);
       process.exit(1);
     });
 }
+
+export { createBackup };

@@ -21,10 +21,13 @@ import activityLogRoutes from './routes/activityLogRoutes';
 import classRoutes from './routes/classRoutes';
 import classChatRoutes from './routes/classChatRoutes';
 import curatorRoutes from './routes/curatorRoutes';
+import backupRoutes from './routes/backupRoutes';
 import { errorHandler } from './utils/errors';
 import { ensureUploadDir } from './services/fileService';
 import { apiLimiter } from './middleware/rateLimit';
 import { initializeSocket } from './services/socketService';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
 
@@ -91,6 +94,13 @@ app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api', classChatRoutes);
 app.use('/api/curators', curatorRoutes);
+app.use('/api/backups', backupRoutes);
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Nurkhonov Academy API Documentation',
+}));
 
 // Log registered routes for debugging
 console.log('✅ Routes registered:');
@@ -109,8 +119,10 @@ console.log('  - /api/modules');
 console.log('  - /api/flashcards');
 console.log('  - /api/practice');
 console.log('  - /api/integrations');
-console.log('  - /api/activity-logs');
-console.log('  - /api/classes');
+  console.log('  - /api/activity-logs');
+  console.log('  - /api/classes');
+  console.log('  - /api/backups');
+  console.log('  - /api-docs (Swagger UI)');
 console.log('  - /api/classes/:classId/messages (group chat)');
 console.log('  - /api/curators');
 

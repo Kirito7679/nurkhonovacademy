@@ -89,53 +89,38 @@ export const getAllStudents = async (
     }
 
     // For teachers, show only students enrolled in their courses
+    // Optimized: use nested relation filter instead of separate query
     if (userRole === 'TEACHER') {
-      const teacherCourses = await prisma.course.findMany({
-        where: { teacherId: userId },
-        select: { id: true },
-      });
-      const courseIds = teacherCourses.map(c => c.id);
-      
-      if (courseIds.length === 0) {
-        // Teacher has no courses, return empty array
-        return res.json({
-          success: true,
-          data: [],
-          pagination: {
-            page: 1,
-            limit: 10,
-            total: 0,
-            totalPages: 0,
-          },
-        });
-      }
-      
       where.studentCourses = {
         some: {
-          courseId: { in: courseIds },
+          course: {
+            teacherId: userId,
+          },
         },
       };
     }
 
     if (courseId) {
-      // Verify course access for teachers
+      // Verify course access for teachers and filter students
       if (userRole === 'TEACHER') {
-        const course = await prisma.course.findUnique({
-          where: { id: courseId as string },
-          select: { teacherId: true },
-        });
-        
-        if (!course || course.teacherId !== userId) {
-          throw new AppError('У вас нет доступа к этому курсу', 403);
-        }
+        // Use nested relation to verify access and filter in one query
+        where.studentCourses = {
+          some: {
+            courseId: courseId as string,
+            course: {
+              teacherId: userId, // Verify teacher owns the course
+            },
+            ...(status && { status: status as string }),
+          },
+        };
+      } else {
+        where.studentCourses = {
+          some: {
+            courseId: courseId as string,
+            ...(status && { status: status as string }),
+          },
+        };
       }
-      
-      where.studentCourses = {
-        some: {
-          courseId: courseId as string,
-          ...(status && { status: status as string }),
-        },
-      };
     }
 
     const students = await prisma.user.findMany({

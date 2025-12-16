@@ -41,6 +41,11 @@ export default function TeacherStatistics() {
     async () => {
       const response = await api.get<ApiResponse<TeacherStatistics>>('/statistics/teacher');
       return response.data;
+    },
+    {
+      staleTime: 1 * 60 * 1000, // 1 minute - statistics update frequently
+      cacheTime: 3 * 60 * 1000, // 3 minutes - keep in cache
+      refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes for fresh data
     }
   );
 
@@ -50,6 +55,10 @@ export default function TeacherStatistics() {
     async () => {
       const response = await api.get<ApiResponse<Array<{ date: string; count: number }>>>('/statistics/new-users-growth?days=30');
       return response.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      cacheTime: 5 * 60 * 1000, // 5 minutes
     }
   );
 
@@ -58,6 +67,10 @@ export default function TeacherStatistics() {
     async () => {
       const response = await api.get<ApiResponse<Array<{ name: string; value: number }>>>('/statistics/device-statistics');
       return response.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      cacheTime: 5 * 60 * 1000, // 5 minutes
     }
   );
 
@@ -66,6 +79,10 @@ export default function TeacherStatistics() {
     async () => {
       const response = await api.get<ApiResponse<Array<{ name: string; value: number }>>>('/statistics/active-students?days=30');
       return response.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      cacheTime: 5 * 60 * 1000, // 5 minutes
     }
   );
 

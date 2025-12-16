@@ -36,6 +36,11 @@ export default function Students() {
       const params = debouncedSearch ? { search: debouncedSearch } : {};
       const response = await api.get<ApiResponse<User[]>>('/students', { params });
       return response.data.data || [];
+    },
+    {
+      staleTime: 2 * 60 * 1000, // 2 minutes - students list changes moderately
+      cacheTime: 5 * 60 * 1000, // 5 minutes - keep in cache
+      refetchOnWindowFocus: false,
     }
   );
 

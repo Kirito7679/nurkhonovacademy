@@ -4,6 +4,92 @@ import { AppError } from '../utils/errors';
 import { AuthRequest } from '../middleware/auth';
 import { logActivity, getClientInfo } from '../utils/activityLogger';
 
+// Get flashcard analytics
+export const getFlashcardAnalytics = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { deckId } = req.params;
+    const userId = req.user!.id;
+
+    if (!deckId) {
+      throw new AppError('ID колоды обязателен', 400);
+    }
+
+    // Get deck
+    const deck = await prisma.flashcardDeck.findUnique({
+      where: { id: deckId },
+      include: {
+        flashcards: true,
+        progress: {
+          where: { userId },
+        },
+      },
+    });
+
+    if (!deck) {
+      throw new AppError('Колода не найдена', 404);
+    }
+
+    // Check access
+    if (!deck.isPublic && deck.createdBy !== userId && req.user!.role !== 'ADMIN' && req.user!.role !== 'TEACHER') {
+      throw new AppError('У вас нет доступа к этой колоде', 403);
+    }
+
+    const totalCards = deck.flashcards.length;
+    const userProgress = deck.progress;
+
+    // Calculate statistics
+    const studiedCards = userProgress.length;
+    const studiedPercentage = totalCards > 0 ? Math.round((studiedCards / totalCards) * 100) : 0;
+
+    // Calculate difficulty distribution
+    const difficultyCounts = {
+      NEW: userProgress.filter(p => p.difficulty === 'NEW').length,
+      EASY: userProgress.filter(p => p.difficulty === 'EASY').length,
+      MEDIUM: userProgress.filter(p => p.difficulty === 'MEDIUM').length,
+      HARD: userProgress.filter(p => p.difficulty === 'HARD').length,
+    };
+
+    // Calculate average review count
+    const avgReviewCount = userProgress.length > 0
+      ? Math.round(userProgress.reduce((sum, p) => sum + p.reviewCount, 0) / userProgress.length)
+      : 0;
+
+    // Cards due for review
+    const now = new Date();
+    const dueForReview = userProgress.filter(p => 
+      p.nextReview && new Date(p.nextReview) <= now
+    ).length;
+
+    // Calculate mastery level (cards reviewed 5+ times with EASY difficulty)
+    const masteredCards = userProgress.filter(p => 
+      p.reviewCount >= 5 && p.difficulty === 'EASY'
+    ).length;
+
+    res.json({
+      success: true,
+      data: {
+        deckId: deck.id,
+        deckTitle: deck.title,
+        totalCards,
+        studiedCards,
+        studiedPercentage,
+        unstudiedCards: totalCards - studiedCards,
+        difficultyDistribution: difficultyCounts,
+        averageReviewCount: avgReviewCount,
+        dueForReview,
+        masteredCards,
+        masteryPercentage: totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getFlashcardDecks = async (
   req: AuthRequest,
   res: Response,

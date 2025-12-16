@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { Course, ApiResponse } from '../types';
-import { BookOpen, Lock, CheckCircle, ArrowRight, Eye, Grid3x3, List, Search, Filter } from 'lucide-react';
+import { BookOpen, Lock, CheckCircle, ArrowRight, Eye, Grid3x3, List, Search, Filter, X } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
 
@@ -14,12 +14,43 @@ type SortBy = 'createdAt' | 'title' | 'lessons';
 
 export default function Courses() {
   const { t } = useTranslation();
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  
+  // Load saved preferences from localStorage
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('courses_viewMode');
+    return (saved as ViewMode) || 'grid';
+  });
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sortBy, setSortBy] = useState<SortBy>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
+    const saved = localStorage.getItem('courses_statusFilter');
+    return (saved as StatusFilter) || 'all';
+  });
+  const [sortBy, setSortBy] = useState<SortBy>(() => {
+    const saved = localStorage.getItem('courses_sortBy');
+    return (saved as SortBy) || 'createdAt';
+  });
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(() => {
+    const saved = localStorage.getItem('courses_sortOrder');
+    return (saved as 'asc' | 'desc') || 'desc';
+  });
+
+  // Save preferences to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('courses_viewMode', viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('courses_statusFilter', statusFilter);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('courses_sortBy', sortBy);
+  }, [sortBy]);
+
+  useEffect(() => {
+    localStorage.setItem('courses_sortOrder', sortOrder);
+  }, [sortOrder]);
   
   const { data: coursesResponse, isLoading } = useQuery(
     ['courses', debouncedSearch, statusFilter, sortBy, sortOrder],
@@ -32,6 +63,11 @@ export default function Courses() {
       
       const response = await api.get<ApiResponse<Course[]>>(`/courses?${params.toString()}`);
       return response.data.data || [];
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes - courses don't change frequently
+      cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache
+      refetchOnWindowFocus: false, // Don't refetch on window focus for better UX
     }
   );
 
@@ -111,17 +147,28 @@ export default function Courses() {
 
           {/* Status Filter */}
           <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-neutral-400 hidden md:block" />
+            <Filter className={`h-5 w-5 ${statusFilter !== 'all' ? 'text-primary-600' : 'text-neutral-400'} hidden md:block transition-colors`} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="input-field flex-1 md:flex-none"
+              className={`input-field flex-1 md:flex-none transition-all ${
+                statusFilter !== 'all' ? 'border-primary-400 bg-primary-50/50' : ''
+              }`}
             >
               <option value="all">{t('courses.allCourses')}</option>
               <option value="approved">{t('students.approved')}</option>
               <option value="pending">{t('students.pending')}</option>
               <option value="locked">{t('courses.locked', { defaultValue: 'Заблокированные' })}</option>
             </select>
+            {statusFilter !== 'all' && (
+              <button
+                onClick={() => setStatusFilter('all')}
+                className="p-1.5 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                title="Сбросить фильтр"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           {/* Sort */}
@@ -137,7 +184,9 @@ export default function Courses() {
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="px-3 md:px-4 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-50 hover:border-primary-300 transition-colors text-sm md:text-base"
+              className={`px-3 md:px-4 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-700 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all text-sm md:text-base ${
+                sortOrder === 'asc' ? 'border-primary-400 bg-primary-50/50' : ''
+              }`}
               title={sortOrder === 'asc' ? t('courses.sortAsc', { defaultValue: 'По возрастанию' }) : t('courses.sortDesc', { defaultValue: 'По убыванию' })}
             >
               {sortOrder === 'asc' ? '↑' : '↓'}

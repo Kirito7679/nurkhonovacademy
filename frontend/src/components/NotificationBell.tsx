@@ -222,22 +222,33 @@ export default function NotificationBell() {
 
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between p-4 border-t-2 border-primary-200/50 bg-primary-50/30">
+                <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t-2 border-primary-200/50 bg-primary-50/30 gap-3">
                   <div className="text-xs text-primary-700 font-medium">
-                    Страница {pagination.page} из {pagination.totalPages}
+                    Показано {((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} из {pagination.total} уведомлений
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => setPage(page - 1)}
                       disabled={page === 1}
                       className="p-1.5 border-2 border-primary-300 rounded-lg text-primary-700 hover:text-white hover:bg-gradient-primary hover:border-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      title="Предыдущая страница"
                     >
                       <ChevronLeft size={14} />
                     </button>
+                    <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-lg border border-primary-200 shadow-sm">
+                      <span className="text-xs font-semibold text-primary-700">
+                        {pagination.page}
+                      </span>
+                      <span className="text-xs text-primary-500">/</span>
+                      <span className="text-xs text-primary-600">
+                        {pagination.totalPages}
+                      </span>
+                    </div>
                     <button
                       onClick={() => setPage(page + 1)}
                       disabled={!pagination.hasMore}
                       className="p-1.5 border-2 border-primary-300 rounded-lg text-primary-700 hover:text-white hover:bg-gradient-primary hover:border-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      title="Следующая страница"
                     >
                       <ChevronRight size={14} />
                     </button>

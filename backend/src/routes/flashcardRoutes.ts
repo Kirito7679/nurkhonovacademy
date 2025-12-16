@@ -8,6 +8,7 @@ import {
   addFlashcard,
   updateFlashcardProgress,
   getFlashcardsToReview,
+  getFlashcardAnalytics,
 } from '../controllers/flashcardController';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roleCheck';
@@ -21,6 +22,9 @@ router.get('/', getFlashcardDecks);
 
 // Get deck by ID
 router.get('/:id', getFlashcardDeckById);
+
+// Get flashcard analytics
+router.get('/:deckId/analytics', getFlashcardAnalytics);
 
 // Get cards to review
 router.get('/:deckId/review', requireRole('STUDENT'), getFlashcardsToReview);

@@ -15,6 +15,7 @@ export default function Chat() {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<{ file: File; url: string } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [fileUploadProgress, setFileUploadProgress] = useState<{ fileName: string; progress: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,7 +51,11 @@ export default function Chat() {
       }>>(`/messages/chat/${teacher.id}`);
       return response.data.data;
     },
-    { enabled: !!teacher?.id, refetchInterval: 3000 }
+    { 
+      enabled: !!teacher?.id, 
+      refetchInterval: 10000, // Увеличено до 10 секунд чтобы не превышать rate limit
+      refetchOnWindowFocus: false,
+    }
   );
 
   const uploadFileMutation = useMutation(
@@ -64,6 +69,12 @@ export default function Chat() {
       }>>('/messages/upload-file', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setFileUploadProgress({ fileName: file.name, progress });
+          }
         },
       });
       return response.data.data;
@@ -84,6 +95,7 @@ export default function Chat() {
         queryClient.invalidateQueries(['chat', teacher?.id]);
         setMessage('');
         setSelectedFile(null);
+        setFileUploadProgress(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -146,17 +158,20 @@ export default function Chat() {
     }
 
     setUploadingFile(true);
+    setFileUploadProgress({ fileName: file.name, progress: 0 });
     try {
       const fileData = await uploadFileMutation.mutateAsync(file);
       setSelectedFile({
         file,
         url: fileData.fileUrl,
       });
+      setFileUploadProgress(null);
     } catch (error: ApiError) {
       setErrorModal({
         isOpen: true,
         message: error.response?.data?.message || 'Ошибка при загрузке файла',
       });
+      setFileUploadProgress(null);
     } finally {
       setUploadingFile(false);
     }
@@ -311,8 +326,19 @@ export default function Chat() {
 
       {/* Message Input */}
       <form onSubmit={handleSubmit} className="chat-input-container">
-        {selectedFile && (
-          <div className="mb-3 flex items-center gap-3 p-3 bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl border-2 border-primary-200 animate-slide-in">
+        {fileUploadProgress && !selectedFile && (
+          <FileUploadProgress
+            fileName={fileUploadProgress.fileName}
+            progress={fileUploadProgress.progress}
+            onCancel={() => {
+              setUploadingFile(false);
+              setFileUploadProgress(null);
+              if (fileInputRef.current) fileInputRef.current.value = '';
+            }}
+          />
+        )}
+        {selectedFile && !fileUploadProgress && (
+          <div className="mb-3 flex items-center gap-3 p-3 bg-gradient-to-r from-primary-50 to-primary-50 rounded-xl border-2 border-primary-200 animate-slide-in">
             <File className="h-5 w-5 text-primary-600 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-neutral-900 truncate">{selectedFile.file.name}</p>

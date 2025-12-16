@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import DOMPurify from 'dompurify';
 import api from '../services/api';
 import { ApiResponse, Comment, CommentsResponse } from '../types';
 import { useAuthStore } from '../store/authStore';
@@ -24,7 +25,7 @@ interface CommentsSectionProps {
 export default function CommentsSection({ lessonId }: CommentsSectionProps) {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  const socket = useSocket();
+  const { socket } = useSocket();
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -45,8 +46,10 @@ export default function CommentsSection({ lessonId }: CommentsSectionProps) {
     });
 
     return () => {
-      socket.emit('leave-lesson', lessonId);
-      socket.off('new-comment');
+      if (socket) {
+        socket.emit('leave-lesson', lessonId);
+        socket.off('new-comment');
+      }
     };
   }, [socket, lessonId, queryClient]);
 
@@ -57,8 +60,10 @@ export default function CommentsSection({ lessonId }: CommentsSectionProps) {
       return response.data;
     },
     {
-      refetchInterval: 5000, // Refetch every 5 seconds to show new comments
-      refetchOnWindowFocus: true,
+      // Убрали refetchInterval - используем WebSocket для обновления комментариев
+      // refetchInterval: 5000, // Убрано - используем WebSocket вместо polling
+      refetchOnWindowFocus: false, // Убрано чтобы не превышать rate limit
+      // Комментарии обновляются через WebSocket (socket.on('new-comment'))
     }
   );
 
@@ -282,7 +287,10 @@ export default function CommentsSection({ lessonId }: CommentsSectionProps) {
                       </div>
                     </form>
                   ) : (
-                    <p className="text-neutral-700 text-sm mb-2 whitespace-pre-wrap">{comment.content}</p>
+                    <p 
+                      className="text-neutral-700 text-sm mb-2 whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comment.content, { ALLOWED_TAGS: [] }) }}
+                    />
                   )}
                   <div className="flex items-center gap-4 text-xs text-neutral-500">
                     <span>
@@ -369,7 +377,10 @@ export default function CommentsSection({ lessonId }: CommentsSectionProps) {
                             </span>
                           )}
                         </div>
-                        <p className="text-neutral-700 text-sm mb-1 whitespace-pre-wrap">{reply.content}</p>
+                        <p 
+                          className="text-neutral-700 text-sm mb-1 whitespace-pre-wrap"
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(reply.content, { ALLOWED_TAGS: [] }) }}
+                        />
                         <div className="flex items-center gap-4 text-xs text-neutral-500">
                           <span>
                             {new Date(reply.createdAt).toLocaleString('ru-RU')}
@@ -394,25 +405,36 @@ export default function CommentsSection({ lessonId }: CommentsSectionProps) {
 
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-neutral-200">
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-6 border-t border-neutral-200 gap-4">
               <div className="text-sm text-neutral-600">
-                Страница {pagination.page} из {pagination.totalPages}
+                Показано {((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} из {pagination.total} комментариев
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
-                  className="btn-secondary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="btn-secondary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+                  title="Предыдущая страница"
                 >
                   <ChevronLeft size={16} />
-                  <span>Назад</span>
+                  <span className="hidden sm:inline">Назад</span>
                 </button>
+                <div className="flex items-center gap-1 px-3 py-2 bg-primary-50 rounded-lg border border-primary-200">
+                  <span className="text-sm font-semibold text-primary-700">
+                    {pagination.page}
+                  </span>
+                  <span className="text-sm text-primary-500">/</span>
+                  <span className="text-sm text-primary-600">
+                    {pagination.totalPages}
+                  </span>
+                </div>
                 <button
                   onClick={() => setPage(page + 1)}
                   disabled={!pagination.hasMore}
-                  className="btn-secondary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="btn-secondary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+                  title="Следующая страница"
                 >
-                  <span>Вперед</span>
+                  <span className="hidden sm:inline">Вперед</span>
                   <ChevronRight size={16} />
                 </button>
               </div>
