@@ -5,6 +5,8 @@ export default function Logo({ className = "w-auto h-8" }: { className?: string 
       viewBox="0 0 250 50"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      style={{ overflow: 'visible' }}
+      preserveAspectRatio="xMidYMid meet"
     >
       <defs>
         <linearGradient id="nurkhonovGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -17,21 +19,22 @@ export default function Logo({ className = "w-auto h-8" }: { className?: string 
       {/* Полный текст "Nurkhonov_Academy" */}
       <text
         x="0"
-        y="32"
-        fontSize="24"
+        y="28"
+        fontSize="22"
         fontWeight="800"
         fill="url(#nurkhonovGradient)"
         fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
         letterSpacing="0.5"
+        dominantBaseline="hanging"
       >
         Nurkhonov_Academy
       </text>
       {/* Подчеркивание */}
       <line
         x1="0"
-        y1="38"
+        y1="36"
         x2="240"
-        y2="38"
+        y2="36"
         stroke="url(#nurkhonovGradient)"
         strokeWidth="2.5"
         strokeLinecap="round"
