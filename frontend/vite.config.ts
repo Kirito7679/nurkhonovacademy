@@ -32,6 +32,7 @@ export default defineConfig({
           if (id.includes('node_modules')) {
             // ВСЕ что связано с React должно быть в vendor-react
             // Это гарантирует что React загружается первым и доступен для всех зависимостей
+            // Включаем все возможные React зависимости и их пакеты
             if (id.includes('react') || 
                 id.includes('react-dom') || 
                 id.includes('react-router') || 
@@ -42,8 +43,10 @@ export default defineConfig({
                 id.includes('zustand') || 
                 id.includes('@hookform') || 
                 id.includes('@tanstack') ||
-                id.includes('lucide-react') || // Иконки могут использовать React контекст
-                id.includes('recharts')) { // Charts могут использовать React
+                id.includes('lucide-react') || 
+                id.includes('recharts') ||
+                id.includes('@testing-library/react') || // Testing library использует React
+                id.includes('eslint-plugin-react')) { // ESLint плагины для React
               return 'vendor-react';
             }
             // Остальные библиотеки
