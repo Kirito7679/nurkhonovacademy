@@ -870,6 +870,21 @@ export default function CourseForm() {
         message={t('modules.deleteConfirm', { defaultValue: 'Вы уверены, что хотите удалить этот модуль? Все уроки в модуле останутся, но будут без модуля.' })}
         variant="danger"
       />
+
+      {/* Delete Course Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteCourseConfirm}
+        onClose={() => setDeleteCourseConfirm(false)}
+        onConfirm={() => {
+          deleteCourseMutation.mutate();
+          setDeleteCourseConfirm(false);
+        }}
+        title="Удаление курса"
+        message="Вы уверены, что хотите удалить этот курс? Это действие нельзя отменить. Все уроки и модули также будут удалены."
+        confirmText={deleteCourseMutation.isLoading ? 'Удаление...' : 'Удалить'}
+        cancelText="Отмена"
+        variant="danger"
+      />
     </div>
   );
 }
