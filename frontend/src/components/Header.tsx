@@ -21,11 +21,11 @@ export default function Header() {
 
   return (
     <header className="bg-white/95 backdrop-blur-md border-b-2 border-primary-200/50 sticky top-0 z-50 shadow-education">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 py-1">
+      <div className="container mx-auto px-2 md:px-4">
+        <div className="flex items-center justify-between h-16">
           <Link 
             to={isTeacher ? '/teacher/dashboard' : '/dashboard'} 
-            className="text-lg md:text-xl font-bold text-gradient animate-slide-in flex items-center gap-2 hover:opacity-90 transition-opacity overflow-visible -mt-1"
+            className="text-lg md:text-xl font-bold text-gradient animate-slide-in flex items-center gap-2 hover:opacity-90 transition-opacity overflow-visible -ml-1 md:-ml-0"
           >
             <Logo className="h-12 md:h-14" />
           </Link>
