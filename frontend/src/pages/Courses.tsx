@@ -141,7 +141,7 @@ const Courses = memo(function Courses() {
               placeholder={t('courses.searchPlaceholder', { defaultValue: 'Поиск курсов...' })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input-field pl-12 w-full"
+              className="input-field pl-14 w-full"
             />
           </div>
 
