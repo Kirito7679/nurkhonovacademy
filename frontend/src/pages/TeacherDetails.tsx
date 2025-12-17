@@ -390,7 +390,15 @@ export default function TeacherDetails() {
                     <div className="flex-1">
                       <p className="font-medium text-neutral-900 mb-1">{course.title}</p>
                       {course.description && (
-                        <p className="text-sm text-neutral-600 line-clamp-2">{course.description}</p>
+                        <div 
+                          className="text-sm text-neutral-600 line-clamp-2 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ 
+                            __html: DOMPurify.sanitize(course.description, { 
+                              ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
+                              ALLOWED_ATTR: ['class']
+                            }) 
+                          }}
+                        />
                       )}
                     </div>
                   </div>

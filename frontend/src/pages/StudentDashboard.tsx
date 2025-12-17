@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import StoriesCarousel from '../components/StoriesCarousel';
 import Banner from '../components/Banner';
 import { getCategoryLabel, getCategoryColor, getLanguageInfo } from '../utils/courseUtils';
+import DOMPurify from 'dompurify';
 
 interface StudentStats {
   totalCourses: number;
@@ -287,7 +288,15 @@ export default function StudentDashboard() {
                   {course.title}
                 </h3>
                 {course.description && (
-                  <p className="text-primary-700 text-xs md:text-sm mb-4 line-clamp-2 break-words">{course.description}</p>
+                  <div 
+                    className="text-primary-700 text-xs md:text-sm mb-4 line-clamp-2 break-words prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(course.description, { 
+                        ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
+                        ALLOWED_ATTR: ['class']
+                      }) 
+                    }}
+                  />
                 )}
                 <div className="flex items-center text-sm text-primary-600 font-medium">
                   <BookOpen className="h-4 w-4 mr-2 text-primary-500" />

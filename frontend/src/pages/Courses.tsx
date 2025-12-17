@@ -332,7 +332,15 @@ const Courses = memo(function Courses() {
                   <div className="flex-shrink-0">{getStatusBadge(course)}</div>
                 </div>
                 {course.description && (
-                  <p className="text-gray-400 text-xs md:text-sm mb-4 line-clamp-2 break-words">{course.description}</p>
+                  <div 
+                    className="text-gray-400 text-xs md:text-sm mb-4 line-clamp-2 break-words prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(course.description, { 
+                        ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
+                        ALLOWED_ATTR: ['class']
+                      }) 
+                    }}
+                  />
                 )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-sm text-neutral-500">
@@ -388,7 +396,15 @@ const Courses = memo(function Courses() {
                         {course.title}
                       </h3>
                       {course.description && (
-                        <p className="text-gray-400 text-xs md:text-sm mb-3 line-clamp-2 break-words">{course.description}</p>
+                        <div 
+                          className="text-gray-400 text-xs md:text-sm mb-3 line-clamp-2 break-words prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ 
+                            __html: DOMPurify.sanitize(course.description, { 
+                              ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
+                              ALLOWED_ATTR: ['class']
+                            }) 
+                          }}
+                        />
                       )}
                     </div>
                     <div className="flex-shrink-0 sm:ml-4">

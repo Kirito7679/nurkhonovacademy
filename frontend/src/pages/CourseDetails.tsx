@@ -10,6 +10,7 @@ import ExtendSubscriptionModal from '../components/ExtendSubscriptionModal';
 import Banner from '../components/Banner';
 import { useAuthStore } from '../store/authStore';
 import { getCategoryLabel, getCategoryColor, getLanguageInfo } from '../utils/courseUtils';
+import DOMPurify from 'dompurify';
 
 export default function CourseDetails() {
   const { t } = useTranslation();
@@ -356,9 +357,15 @@ export default function CourseDetails() {
         {course.description && (
           <div className="card p-6 md:p-8 mb-6">
             <h2 className="text-xl md:text-2xl font-semibold text-neutral-900 mb-4">{t('courses.aboutCourse', { defaultValue: 'О курсе' })}</h2>
-            <p className="text-neutral-600 text-sm md:text-base lg:text-lg leading-relaxed break-words whitespace-pre-line">
-              {course.description}
-            </p>
+            <div 
+              className="text-neutral-600 text-sm md:text-base lg:text-lg leading-relaxed break-words prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ 
+                __html: DOMPurify.sanitize(course.description, { 
+                  ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br', 'a', 'span', 'div'],
+                  ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style']
+                }) 
+              }}
+            />
           </div>
         )}
 

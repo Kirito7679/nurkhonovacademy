@@ -6,6 +6,7 @@ import api from '../services/api';
 import { ApiResponse, Course } from '../types';
 import { BookOpen, Plus, Edit, Grid3x3, List } from 'lucide-react';
 import { getLanguageInfo, getCategoryLabel, getCategoryColor } from '../utils/courseUtils';
+import DOMPurify from 'dompurify';
 
 type ViewMode = 'grid' | 'list';
 
@@ -136,7 +137,15 @@ export default function TeacherCourses() {
                   {course.title}
                 </h3>
                 {course.description && (
-                  <p className="text-neutral-600 text-xs md:text-sm mb-4 line-clamp-2 break-words">{course.description}</p>
+                  <div 
+                    className="text-neutral-600 text-xs md:text-sm mb-4 line-clamp-2 break-words prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(course.description, { 
+                        ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
+                        ALLOWED_ATTR: ['class']
+                      }) 
+                    }}
+                  />
                 )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-sm text-neutral-500">
@@ -179,7 +188,15 @@ export default function TeacherCourses() {
                       {course.title}
                     </h3>
                     {course.description && (
-                      <p className="text-neutral-600 text-xs md:text-sm mb-3 line-clamp-2 break-words">{course.description}</p>
+                      <div 
+                        className="text-neutral-600 text-xs md:text-sm mb-3 line-clamp-2 break-words prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ 
+                          __html: DOMPurify.sanitize(course.description, { 
+                            ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
+                            ALLOWED_ATTR: ['class']
+                          }) 
+                        }}
+                      />
                     )}
                   </div>
                   <div className="flex items-center justify-between">
