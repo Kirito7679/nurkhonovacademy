@@ -402,12 +402,18 @@ export default function LessonView() {
   const videoUrl = lesson.videoUrl ? getVideoEmbedUrl(lesson.videoUrl) : null;
   const videoSource = lesson.videoUrl ? detectVideoSource(lesson.videoUrl) : null;
 
-  // Auto-expand module containing current lesson
+  // Auto-expand module containing current lesson (only once when lesson loads)
   useEffect(() => {
-    if (lesson?.moduleId && !expandedModules.has(lesson.moduleId)) {
-      setExpandedModules(prev => new Set([...prev, lesson.moduleId!]));
+    if (lesson?.moduleId) {
+      setExpandedModules(prev => {
+        if (!prev.has(lesson.moduleId!)) {
+          return new Set([...prev, lesson.moduleId!]);
+        }
+        return prev;
+      });
     }
-  }, [lesson?.moduleId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]); // Only run when lessonId changes, not when lesson object changes
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
