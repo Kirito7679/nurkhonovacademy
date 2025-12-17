@@ -173,6 +173,7 @@ export default function CourseForm() {
     formState: { errors },
     reset,
     watch,
+    setValue,
   } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
