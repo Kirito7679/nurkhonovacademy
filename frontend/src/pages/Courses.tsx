@@ -289,8 +289,9 @@ const Courses = memo(function Courses() {
         // Grid View
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {courses.map((course, index) => (
-            <div
+            <Link
               key={course.id}
+              to={`/courses/${course.id}`}
               className="card card-hover overflow-hidden group animate-fade-scale"
               style={{ animationDelay: `${0.1 * index}s` }}
             >
@@ -338,17 +339,9 @@ const Courses = memo(function Courses() {
                     <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
                     <span>{course._count?.lessons || 0} {t('lessons.lessonsCount', { count: course._count?.lessons || 0, defaultValue: 'уроков' })}</span>
                   </div>
-                  <Link
-                    to={`/courses/${course.id}`}
-                    className="btn-secondary group inline-flex items-center gap-2 text-sm"
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span>Просмотр</span>
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
-                  </Link>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       ) : (
@@ -407,18 +400,10 @@ const Courses = memo(function Courses() {
                       <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
                       <span>{course._count?.lessons || 0} {t('lessons.lessonsCount', { count: course._count?.lessons || 0, defaultValue: 'уроков' })}</span>
                     </div>
-                    <Link
-                      to={`/courses/${course.id}`}
-                      className="btn-secondary group inline-flex items-center gap-2 text-sm"
-                    >
-                      <Eye className="h-4 w-4" />
-                      <span>{t('courses.view', { defaultValue: 'Просмотр' })}</span>
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
-                    </Link>
                   </div>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
