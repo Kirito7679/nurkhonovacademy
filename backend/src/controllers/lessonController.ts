@@ -330,25 +330,32 @@ export const updateProgress = async (
       });
 
       // Award coins if lesson is completed for the first time (atomic check)
+      let updatedUser = null;
       if (isNowCompleted && !wasCompleted) {
-        await tx.user.update({
+        updatedUser = await tx.user.update({
           where: { id: req.user!.id },
           data: {
             coins: {
               increment: 5, // 5 coins for completing a lesson
             },
           },
+          select: {
+            coins: true,
+          },
         });
       }
 
-      return progress;
+      return { progress, updatedUser };
     });
 
-    const progress = result;
+    const { progress, updatedUser } = result;
 
     res.json({
       success: true,
-      data: progress,
+      data: {
+        ...progress,
+        coins: updatedUser?.coins,
+      },
     });
   } catch (error) {
     next(error);

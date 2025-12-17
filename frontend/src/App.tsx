@@ -34,6 +34,7 @@ const TeacherDetails = lazy(() => import('./pages/TeacherDetails'));
 const TeacherPayment = lazy(() => import('./pages/TeacherPayment'));
 const IntermediateTestForm = lazy(() => import('./pages/IntermediateTestForm'));
 const IntermediateTestView = lazy(() => import('./pages/IntermediateTestView'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -144,6 +145,14 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[Role.STUDENT]}>
                 <IntermediateTestView />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/leaderboard"
+            element={
+              <PrivateRoute allowedRoles={[Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.CURATOR]}>
+                <Leaderboard />
               </PrivateRoute>
             }
           />

@@ -116,15 +116,21 @@ export default function LessonView() {
     { enabled: !!lessonId }
   );
 
+  const { updateUser } = useAuthStore();
+  
   const updateProgressMutation = useMutation(
     async (data: { completed?: boolean; lastPosition?: number }) => {
-      const response = await api.put<ApiResponse<{ completed: boolean; lastPosition: number }>>(`/lessons/${lessonId}/progress`, data);
+      const response = await api.put<ApiResponse<{ completed: boolean; lastPosition: number; coins?: number }>>(`/lessons/${lessonId}/progress`, data);
       return response.data;
     },
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
         queryClient.invalidateQueries(['lesson', lessonId]);
         queryClient.invalidateQueries(['courseLessons', courseId]);
+        // Update user coins if they were awarded
+        if (data.data?.coins !== undefined && user) {
+          updateUser({ ...user, coins: data.data.coins });
+        }
       },
     }
   );

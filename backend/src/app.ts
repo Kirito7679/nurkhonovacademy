@@ -26,6 +26,7 @@ import intermediateTestRoutes from './routes/intermediateTestRoutes';
 import storyRoutes from './routes/storyRoutes';
 import bannerRoutes from './routes/bannerRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import leaderboardRoutes from './routes/leaderboardRoutes';
 import { errorHandler } from './utils/errors';
 import { ensureUploadDir } from './services/fileService';
 import { apiLimiter } from './middleware/rateLimit';
@@ -103,6 +104,7 @@ app.use('/api/tests', intermediateTestRoutes);
 app.use('/api/stories', storyRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

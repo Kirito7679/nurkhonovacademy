@@ -185,6 +185,7 @@ export const login = async (
           language: user.language,
           hasFlashcardsAccess: user.hasFlashcardsAccess,
           hasIntegrationsAccess: user.hasIntegrationsAccess,
+          coins: user.coins,
         },
         token,
       },

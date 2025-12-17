@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
-import { LogOut, User, Home, HelpCircle } from 'lucide-react';
+import { LogOut, User, Home, HelpCircle, Coins } from 'lucide-react';
 import { Role } from '../types';
 import NotificationBell from './NotificationBell';
 import Logo from './Logo';
@@ -57,6 +57,16 @@ export default function Header() {
           </Link>
           
           <div className="flex items-center gap-2 md:gap-4">
+            {/* Coins Display */}
+            {user?.role === Role.STUDENT && user?.coins !== undefined && (
+              <Link
+                to="/leaderboard"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <Coins className="h-4 w-4" />
+                <span className="font-semibold text-sm">{user.coins}</span>
+              </Link>
+            )}
             <NotificationBell />
             <LanguageToggle />
             
