@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Users, BookOpen, User, BarChart3, Instagram, Youtube, Send, MessageSquare, SquareStack, FileText, Link as LinkIcon, GraduationCap, UserCog } from 'lucide-react';
+import { Home, Users, BookOpen, User, BarChart3, Instagram, Youtube, Send, MessageSquare, SquareStack, FileText, Link as LinkIcon, GraduationCap, UserCog } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 export default function Sidebar() {
@@ -14,7 +14,7 @@ export default function Sidebar() {
     label: string;
     roles?: string[];
   }> = [
-    { path: '/teacher/dashboard', icon: LayoutDashboard, label: t('dashboard.title') },
+    { path: '/teacher/dashboard', icon: Home, label: t('dashboard.title') },
     { path: '/teacher/statistics', icon: BarChart3, label: t('dashboard.statistics') },
     { path: '/teacher/students', icon: Users, label: t('students.title') },
     { path: '/teacher/courses', icon: BookOpen, label: t('courses.title') },

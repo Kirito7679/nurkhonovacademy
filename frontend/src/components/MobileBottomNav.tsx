@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, BookOpen, User, BarChart3, Settings, MessageSquare } from 'lucide-react';
+import { Home, Users, BookOpen, User, BarChart3, Settings, MessageSquare } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 export default function MobileBottomNav() {
@@ -13,7 +13,7 @@ export default function MobileBottomNav() {
   }
 
   const teacherMenuItems = [
-    { path: '/teacher/dashboard', icon: LayoutDashboard, label: 'Панель' },
+    { path: '/teacher/dashboard', icon: Home, label: 'Панель' },
     { path: '/teacher/statistics', icon: BarChart3, label: 'Статистика' },
     { path: '/teacher/students', icon: Users, label: 'Студенты' },
     { path: '/teacher/courses', icon: BookOpen, label: 'Курсы' },
@@ -21,7 +21,7 @@ export default function MobileBottomNav() {
   ];
 
   const studentMenuItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Панель' },
+    { path: '/dashboard', icon: Home, label: 'Панель' },
     { path: '/courses', icon: BookOpen, label: 'Курсы' },
     { path: '/chat', icon: MessageSquare, label: 'Чат' },
     { path: '/profile', icon: Settings, label: 'Настройки' },

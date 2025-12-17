@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, BookOpen, Settings, Instagram, Youtube, Send, MessageSquare, SquareStack, Link as LinkIcon } from 'lucide-react';
+import { Home, BookOpen, Settings, Instagram, Youtube, Send, MessageSquare, SquareStack, Link as LinkIcon } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 export default function StudentSidebar() {
@@ -10,7 +10,7 @@ export default function StudentSidebar() {
 
   // Базовые пункты меню, доступные всем студентам
   const baseMenuItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: t('dashboard.title') },
+    { path: '/dashboard', icon: Home, label: t('dashboard.title') },
     { path: '/courses', icon: BookOpen, label: t('courses.title') },
     { path: '/chat', icon: MessageSquare, label: t('chat.withTeacher') },
     { path: '/profile', icon: Settings, label: t('profile.settings') },
