@@ -8,6 +8,7 @@ import { BookOpen, Lock, CheckCircle, ArrowRight, Eye, Grid3x3, List, Search, Fi
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
 import { getCategoryLabel, getCategoryColor, getLanguageInfo } from '../utils/courseUtils';
+import DOMPurify from 'dompurify';
 
 type ViewMode = 'grid' | 'list';
 type StatusFilter = 'all' | 'approved' | 'pending' | 'locked';
