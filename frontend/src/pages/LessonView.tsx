@@ -339,7 +339,7 @@ export default function LessonView() {
     
     // Check if it's the first lesson or previous is completed
     const lessons = lessonsResponse || [];
-    const sortedLessons = [...lessons].sort((a, b) => a.order - b.order);
+    const sortedLessons = [...lessons].sort((a, b) => (a.order || 0) - (b.order || 0));
     const currentIndex = sortedLessons.findIndex(l => l.id === lesson.id);
     
     if (currentIndex === 0) return true;
@@ -350,6 +350,18 @@ export default function LessonView() {
     
     return false;
   };
+
+  // Auto-expand module containing current lesson (must be before conditional returns!)
+  useEffect(() => {
+    if (lessonResponse?.moduleId) {
+      setExpandedModules(prev => {
+        if (!prev.has(lessonResponse.moduleId!)) {
+          return new Set([...prev, lessonResponse.moduleId!]);
+        }
+        return prev;
+      });
+    }
+  }, [lessonId, lessonResponse?.moduleId]);
 
   if (isLoading) {
     return (
@@ -401,19 +413,6 @@ export default function LessonView() {
 
   const videoUrl = lesson.videoUrl ? getVideoEmbedUrl(lesson.videoUrl) : null;
   const videoSource = lesson.videoUrl ? detectVideoSource(lesson.videoUrl) : null;
-
-  // Auto-expand module containing current lesson (only once when lesson loads)
-  useEffect(() => {
-    if (lesson?.moduleId) {
-      setExpandedModules(prev => {
-        if (!prev.has(lesson.moduleId!)) {
-          return new Set([...prev, lesson.moduleId!]);
-        }
-        return prev;
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessonId]); // Only run when lessonId changes, not when lesson object changes
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
