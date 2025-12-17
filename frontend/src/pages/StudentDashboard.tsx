@@ -7,6 +7,7 @@ import { BookOpen, Clock, CheckCircle, TrendingUp, Award, PlayCircle } from 'luc
 import { useAuthStore } from '../store/authStore';
 import StoriesCarousel from '../components/StoriesCarousel';
 import Banner from '../components/Banner';
+import { getCategoryLabel, getCategoryColor, getLanguageInfo } from '../utils/courseUtils';
 
 interface StudentStats {
   totalCourses: number;
@@ -264,6 +265,21 @@ export default function StudentDashboard() {
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  
+                  {/* Tags overlay */}
+                  <div className="absolute top-2 left-2 flex flex-wrap gap-2 z-10">
+                    {getLanguageInfo(course.language) && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/90 backdrop-blur-sm border border-white/20 shadow-sm">
+                        <span className="mr-1">{getLanguageInfo(course.language)!.flag}</span>
+                        <span>{getLanguageInfo(course.language)!.label}</span>
+                      </span>
+                    )}
+                    {course.category && (
+                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getCategoryColor(course.category)} backdrop-blur-sm shadow-sm`}>
+                        {getCategoryLabel(course.category)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="p-4 md:p-6">

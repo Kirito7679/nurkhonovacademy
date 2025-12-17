@@ -447,6 +447,10 @@ export const approveCourseAccess = async (
         teacherId: true,
         subscriptionType: true,
         trialPeriodDays: true,
+        price30Days: true,
+        price3Months: true,
+        price6Months: true,
+        price1Year: true,
       },
     });
 
@@ -481,13 +485,36 @@ export const approveCourseAccess = async (
       if (action === 'approve') {
         accessStartDate = new Date(); // Start from now
 
-        // Set end date based on subscription type
+        // Get subscription period from request body (30_DAYS, 3_MONTHS, 6_MONTHS, 1_YEAR)
+        const subscriptionPeriod = req.body.subscriptionPeriod as string | undefined;
+
+        // Set end date based on subscription type and period
         if (course.subscriptionType === 'TRIAL' && course.trialPeriodDays) {
-          // Trial period - limited days
+          // Trial period - limited days (legacy support)
           accessEndDate = new Date();
           accessEndDate.setDate(accessEndDate.getDate() + course.trialPeriodDays);
-        } else if (course.subscriptionType === 'PAID') {
-          // Paid subscription - no end date (unlimited access)
+        } else if (course.subscriptionType === 'PAID' && subscriptionPeriod) {
+          // Paid subscription with specific period
+          accessEndDate = new Date();
+          switch (subscriptionPeriod) {
+            case '30_DAYS':
+              accessEndDate.setDate(accessEndDate.getDate() + 30);
+              break;
+            case '3_MONTHS':
+              accessEndDate.setMonth(accessEndDate.getMonth() + 3);
+              break;
+            case '6_MONTHS':
+              accessEndDate.setMonth(accessEndDate.getMonth() + 6);
+              break;
+            case '1_YEAR':
+              accessEndDate.setFullYear(accessEndDate.getFullYear() + 1);
+              break;
+            default:
+              // If no period specified, unlimited access
+              accessEndDate = null;
+          }
+        } else if (course.subscriptionType === 'PAID' && !subscriptionPeriod) {
+          // Paid subscription without period - unlimited access (legacy)
           accessEndDate = null;
         } else if (course.subscriptionType === 'FREE') {
           // Free course - unlimited access
@@ -980,6 +1007,159 @@ export const deleteStudent = async (
     res.json({
       success: true,
       message: 'Студент успешно удален',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Extend subscription for a course
+export const extendSubscription = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { courseId } = req.params;
+    const { subscriptionPeriod } = req.body; // 30_DAYS, 3_MONTHS, 6_MONTHS, 1_YEAR
+
+    if (!subscriptionPeriod || !['30_DAYS', '3_MONTHS', '6_MONTHS', '1_YEAR'].includes(subscriptionPeriod)) {
+      throw new AppError('Неверный период подписки. Используйте: 30_DAYS, 3_MONTHS, 6_MONTHS, 1_YEAR', 400);
+    }
+
+    const studentId = req.user!.id;
+
+    // Get course with prices
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: {
+        id: true,
+        title: true,
+        subscriptionType: true,
+        price30Days: true,
+        price3Months: true,
+        price6Months: true,
+        price1Year: true,
+      },
+    });
+
+    if (!course) {
+      throw new AppError('Курс не найден', 404);
+    }
+
+    if (course.subscriptionType !== 'PAID') {
+      throw new AppError('Продление подписки доступно только для платных курсов', 400);
+    }
+
+    // Get price for selected period
+    let price: number | null = null;
+    switch (subscriptionPeriod) {
+      case '30_DAYS':
+        price = course.price30Days;
+        break;
+      case '3_MONTHS':
+        price = course.price3Months;
+        break;
+      case '6_MONTHS':
+        price = course.price6Months;
+        break;
+      case '1_YEAR':
+        price = course.price1Year;
+        break;
+    }
+
+    if (!price || price <= 0) {
+      throw new AppError('Цена для выбранного периода не установлена', 400);
+    }
+
+    // Get current student course
+    const studentCourse = await prisma.studentCourse.findUnique({
+      where: {
+        studentId_courseId: {
+          studentId,
+          courseId,
+        },
+      },
+    });
+
+    if (!studentCourse) {
+      throw new AppError('Подписка на курс не найдена', 404);
+    }
+
+    // Check if subscription is expired or will expire soon
+    const now = new Date();
+    let newAccessEndDate: Date;
+
+    if (studentCourse.accessEndDate) {
+      const currentEndDate = new Date(studentCourse.accessEndDate);
+      // If subscription is still active, extend from current end date
+      // If expired, start from now
+      const baseDate = currentEndDate > now ? currentEndDate : now;
+      newAccessEndDate = new Date(baseDate);
+    } else {
+      // If no end date (unlimited), start from now
+      newAccessEndDate = new Date();
+    }
+
+    // Add period to end date
+    switch (subscriptionPeriod) {
+      case '30_DAYS':
+        newAccessEndDate.setDate(newAccessEndDate.getDate() + 30);
+        break;
+      case '3_MONTHS':
+        newAccessEndDate.setMonth(newAccessEndDate.getMonth() + 3);
+        break;
+      case '6_MONTHS':
+        newAccessEndDate.setMonth(newAccessEndDate.getMonth() + 6);
+        break;
+      case '1_YEAR':
+        newAccessEndDate.setFullYear(newAccessEndDate.getFullYear() + 1);
+        break;
+    }
+
+    // Update student course with new end date
+    // Note: In real implementation, you would process payment first
+    // For now, we'll just update the dates
+    const updatedStudentCourse = await prisma.studentCourse.update({
+      where: {
+        studentId_courseId: {
+          studentId,
+          courseId,
+        },
+      },
+      data: {
+        accessEndDate: newAccessEndDate,
+        accessStartDate: studentCourse.accessStartDate || new Date(),
+        status: 'APPROVED',
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // Create notification
+    await createNotification(
+      studentId,
+      'COURSE_APPROVED',
+      'Подписка продлена',
+      `Ваша подписка на курс "${course.title}" продлена до ${newAccessEndDate.toLocaleDateString('ru-RU')}`,
+      `/courses/${courseId}`
+    );
+
+    res.json({
+      success: true,
+      data: {
+        studentCourse: updatedStudentCourse,
+        price,
+        subscriptionPeriod,
+        newEndDate: newAccessEndDate,
+      },
+      message: 'Подписка успешно продлена',
     });
   } catch (error) {
     next(error);

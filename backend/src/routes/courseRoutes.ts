@@ -7,6 +7,7 @@ import {
   deleteCourse,
   getCourseLessons,
   requestCourseAccess,
+  extendCourseSubscription,
 } from '../controllers/courseController';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roleCheck';
@@ -20,6 +21,7 @@ router.get('/:id/lessons', authenticate, getCourseLessons);
 
 // Student routes
 router.post('/:id/request', authenticate, requireRole('STUDENT'), requestCourseAccess);
+router.post('/:id/extend', authenticate, requireRole('STUDENT'), extendCourseSubscription);
 
 // Teacher/Admin routes
 router.post('/', authenticate, requireRole('TEACHER', 'ADMIN'), createCourse);

@@ -10,6 +10,7 @@ import {
   detachCourse,
   getStudentProgress,
   deleteStudent,
+  extendSubscription,
 } from '../controllers/studentController';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roleCheck';

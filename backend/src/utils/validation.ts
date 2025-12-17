@@ -48,12 +48,18 @@ export const courseSchema = z.object({
   title: z.string().min(1, 'Название курса обязательно'),
   description: z.string().optional(),
   thumbnailUrl: z.string().url().optional().or(z.literal('')),
-  price: z.number().min(0).default(0),
+  price: z.number().min(0).default(0), // Базовая цена (для обратной совместимости)
   trialLessonId: z.string().uuid().optional().or(z.literal('')),
   isVisible: z.boolean().optional().default(true),
   language: z.enum(['ru', 'en', 'uz', 'kk']).optional().default('ru'),
+  category: z.enum(['LANGUAGE', 'BUSINESS', 'IT', 'DESIGN', 'MARKETING', 'FINANCE', 'HEALTH', 'EDUCATION', 'OTHER']).optional(),
   subscriptionType: z.enum(['FREE', 'TRIAL', 'PAID']).optional(),
-  trialPeriodDays: z.number().int().min(0).optional(),
+  trialPeriodDays: z.number().int().min(0).optional(), // Для обратной совместимости
+  // Цены для разных периодов подписки
+  price30Days: z.number().min(0).optional(),
+  price3Months: z.number().min(0).optional(),
+  price6Months: z.number().min(0).optional(),
+  price1Year: z.number().min(0).optional(),
 });
 
 export const moduleSchema = z.object({

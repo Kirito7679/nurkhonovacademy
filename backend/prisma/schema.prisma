@@ -68,13 +68,19 @@ model Course {
   title            String
   description      String?
   thumbnailUrl     String?
-  price            Float    @default(0)
+  price            Float    @default(0) // Базовая цена (для обратной совместимости)
   trialLessonId    String?
   teacherId        String
   isVisible        Boolean  @default(true) // Видим ли курс для студентов (если false, виден только назначенным студентам)
   language         String   @default("ru") // ru, en, uz, kk - язык курса
+  category         String? // LANGUAGE, BUSINESS, IT, DESIGN, MARKETING, FINANCE, etc. - категория курса
   subscriptionType String? // FREE, TRIAL, PAID - тип подписки
-  trialPeriodDays  Int? // Количество дней пробного периода
+  trialPeriodDays  Int? // Количество дней пробного периода (для обратной совместимости)
+  // Цены для разных периодов подписки
+  price30Days      Float? // Цена за 30 дней
+  price3Months     Float? // Цена за 3 месяца
+  price6Months     Float? // Цена за 6 месяцев
+  price1Year       Float? // Цена за год
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

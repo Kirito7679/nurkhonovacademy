@@ -39,3 +39,4 @@ CREATE INDEX IF NOT EXISTS "users_createdBy_idx" ON "users"("createdBy");
 
 1. Перезапустите backend сервер
 2. Проверьте, что все работает корректно
+

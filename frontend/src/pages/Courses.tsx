@@ -7,9 +7,11 @@ import { Course, ApiResponse } from '../types';
 import { BookOpen, Lock, CheckCircle, ArrowRight, Eye, Grid3x3, List, Search, Filter, X } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 import Skeleton from '../components/Skeleton';
+import { getCategoryLabel, getCategoryColor, getLanguageInfo } from '../utils/courseUtils';
 
 type ViewMode = 'grid' | 'list';
 type StatusFilter = 'all' | 'approved' | 'pending' | 'locked';
+type CategoryFilter = 'all' | 'LANGUAGE' | 'BUSINESS' | 'IT' | 'DESIGN' | 'MARKETING' | 'FINANCE' | 'HEALTH' | 'EDUCATION' | 'OTHER';
 type SortBy = 'createdAt' | 'title' | 'lessons';
 
 const Courses = memo(function Courses() {
@@ -34,6 +36,10 @@ const Courses = memo(function Courses() {
     const saved = localStorage.getItem('courses_sortOrder');
     return (saved as 'asc' | 'desc') || 'desc';
   });
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(() => {
+    const saved = localStorage.getItem('courses_categoryFilter');
+    return (saved as CategoryFilter) || 'all';
+  });
 
   // Save preferences to localStorage when they change
   useEffect(() => {
@@ -51,9 +57,13 @@ const Courses = memo(function Courses() {
   useEffect(() => {
     localStorage.setItem('courses_sortOrder', sortOrder);
   }, [sortOrder]);
+
+  useEffect(() => {
+    localStorage.setItem('courses_categoryFilter', categoryFilter);
+  }, [categoryFilter]);
   
   const { data: coursesResponse, isLoading } = useQuery(
-    ['courses', debouncedSearch, statusFilter, sortBy, sortOrder],
+    ['courses', debouncedSearch, statusFilter, categoryFilter, sortBy, sortOrder],
     async () => {
       const params = new URLSearchParams();
       if (debouncedSearch) params.append('search', debouncedSearch);
@@ -62,7 +72,14 @@ const Courses = memo(function Courses() {
       params.append('sortOrder', sortOrder);
       
       const response = await api.get<ApiResponse<Course[]>>(`/courses?${params.toString()}`);
-      return response.data.data || [];
+      let courses = response.data.data || [];
+      
+      // Filter by category on frontend (can be moved to backend later)
+      if (categoryFilter !== 'all') {
+        courses = courses.filter(course => course.category === categoryFilter);
+      }
+      
+      return courses;
     },
     {
       staleTime: 5 * 60 * 1000, // 5 minutes - courses don't change frequently
@@ -155,7 +172,7 @@ const Courses = memo(function Courses() {
                 statusFilter !== 'all' ? 'border-primary-400 bg-primary-50/50' : ''
               }`}
             >
-              <option value="all">{t('courses.allCourses')}</option>
+              <option value="all">{t('courses.allCourses', { defaultValue: 'Все курсы' })}</option>
               <option value="approved">{t('students.approved')}</option>
               <option value="pending">{t('students.pending')}</option>
               <option value="locked">{t('courses.locked', { defaultValue: 'Заблокированные' })}</option>
@@ -165,6 +182,37 @@ const Courses = memo(function Courses() {
                 onClick={() => setStatusFilter('all')}
                 className="p-1.5 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
                 title="Сбросить фильтр"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}
+              className={`input-field flex-1 md:flex-none transition-all ${
+                categoryFilter !== 'all' ? 'border-primary-400 bg-primary-50/50' : ''
+              }`}
+            >
+              <option value="all">{t('courses.allCategories', { defaultValue: 'Все категории' })}</option>
+              <option value="LANGUAGE">{getCategoryLabel('LANGUAGE')}</option>
+              <option value="BUSINESS">{getCategoryLabel('BUSINESS')}</option>
+              <option value="IT">{getCategoryLabel('IT')}</option>
+              <option value="DESIGN">{getCategoryLabel('DESIGN')}</option>
+              <option value="MARKETING">{getCategoryLabel('MARKETING')}</option>
+              <option value="FINANCE">{getCategoryLabel('FINANCE')}</option>
+              <option value="HEALTH">{getCategoryLabel('HEALTH')}</option>
+              <option value="EDUCATION">{getCategoryLabel('EDUCATION')}</option>
+              <option value="OTHER">{getCategoryLabel('OTHER')}</option>
+            </select>
+            {categoryFilter !== 'all' && (
+              <button
+                onClick={() => setCategoryFilter('all')}
+                className="p-1.5 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                title="Сбросить фильтр категории"
               >
                 <X size={16} />
               </button>
@@ -258,6 +306,21 @@ const Courses = memo(function Courses() {
                         }}
                       />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  
+                  {/* Tags overlay */}
+                  <div className="absolute top-2 left-2 flex flex-wrap gap-2 z-10">
+                    {getLanguageInfo(course.language) && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/90 backdrop-blur-sm border border-white/20 shadow-sm">
+                        <span className="mr-1">{getLanguageInfo(course.language)!.flag}</span>
+                        <span>{getLanguageInfo(course.language)!.label}</span>
+                      </span>
+                    )}
+                    {course.category && (
+                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getCategoryColor(course.category)} backdrop-blur-sm shadow-sm`}>
+                        {getCategoryLabel(course.category)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="p-4 md:p-6">
@@ -292,8 +355,9 @@ const Courses = memo(function Courses() {
         // List View
         <div className="space-y-4">
           {courses.map((course, index) => (
-            <div
+            <Link
               key={course.id}
+              to={`/courses/${course.id}`}
               className="card card-hover group animate-slide-in"
               style={{ animationDelay: `${0.05 * index}s` }}
             >
@@ -314,6 +378,19 @@ const Courses = memo(function Courses() {
                 <div className="flex-1 flex flex-col justify-between">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {getLanguageInfo(course.language) && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white border border-neutral-200 shadow-sm">
+                            <span className="mr-1">{getLanguageInfo(course.language)!.flag}</span>
+                            <span>{getLanguageInfo(course.language)!.label}</span>
+                          </span>
+                        )}
+                        {course.category && (
+                          <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getCategoryColor(course.category)}`}>
+                            {getCategoryLabel(course.category)}
+                          </span>
+                        )}
+                      </div>
                       <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-1 break-words">
                         {course.title}
                       </h3>

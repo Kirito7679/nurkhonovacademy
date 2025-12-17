@@ -4,10 +4,12 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { Course, Lesson, ApiResponse, StudentCourseStatus, Module, IntermediateTest, Role } from '../types';
-import { Play, Lock, CheckCircle, BookOpen, Clock, User, ArrowRight, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { Play, Lock, CheckCircle, BookOpen, Clock, User, ArrowRight, ChevronDown, ChevronUp, FileText, Award, Calendar, Users } from 'lucide-react';
 import CoursePurchaseModal from '../components/CoursePurchaseModal';
+import ExtendSubscriptionModal from '../components/ExtendSubscriptionModal';
 import Banner from '../components/Banner';
 import { useAuthStore } from '../store/authStore';
+import { getCategoryLabel, getCategoryColor, getLanguageInfo } from '../utils/courseUtils';
 
 export default function CourseDetails() {
   const { t } = useTranslation();
@@ -16,6 +18,7 @@ export default function CourseDetails() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [showExtendModal, setShowExtendModal] = useState(false);
   const [showLessons, setShowLessons] = useState(true);
 
   const { data: courseResponse, isLoading: courseLoading } = useQuery(
@@ -237,23 +240,51 @@ export default function CourseDetails() {
       {/* Course Info Section */}
       <div className="mb-8 animate-slide-in">
         {!course.thumbnailUrl && (
-          <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gradient mb-4 break-words">
-            {course.title}
-          </h1>
+          <>
+            {/* Tags */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {getLanguageInfo(course.language) && (
+                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-neutral-200 shadow-sm">
+                  <span className="mr-1.5 text-base">{getLanguageInfo(course.language)!.flag}</span>
+                  <span>{getLanguageInfo(course.language)!.label}</span>
+                </span>
+              )}
+              {course.category && (
+                <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${getCategoryColor(course.category)}`}>
+                  {getCategoryLabel(course.category)}
+                </span>
+              )}
+            </div>
+            <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gradient mb-4 break-words">
+              {course.title}
+            </h1>
+          </>
         )}
         
-        {/* Course Stats */}
+        {/* Tags for courses with thumbnail */}
+        {course.thumbnailUrl && (
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            {getLanguageInfo(course.language) && (
+              <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-neutral-200 shadow-sm">
+                <span className="mr-1.5 text-base">{getLanguageInfo(course.language)!.flag}</span>
+                <span>{getLanguageInfo(course.language)!.label}</span>
+              </span>
+            )}
+            {course.category && (
+              <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${getCategoryColor(course.category)}`}>
+                {getCategoryLabel(course.category)}
+              </span>
+            )}
+          </div>
+        )}
+        
+        {/* Course Progress Stats - Only for students with access */}
         {course.hasAccess && lessons.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="card p-4 text-center">
-              <BookOpen className="h-6 w-6 text-primary-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-neutral-900">{lessons.length}</div>
-              <div className="text-sm text-neutral-600">{t('lessons.title')}</div>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             <div className="card p-4 text-center">
               <CheckCircle className="h-6 w-6 text-green-500 mx-auto mb-2" />
               <div className="text-2xl font-bold text-neutral-900">{completedLessons}</div>
-              <div className="text-sm text-neutral-600">{t('lessons.completed')}</div>
+              <div className="text-sm text-neutral-600">{t('lessons.completed', { defaultValue: 'Завершено' })}</div>
             </div>
             <div className="card p-4 text-center">
               <div className="h-6 w-6 mx-auto mb-2 flex items-center justify-center">
@@ -265,9 +296,58 @@ export default function CourseDetails() {
               <div className="text-sm text-neutral-600">{t('dashboard.overallProgress', { defaultValue: 'Прогресс' })}</div>
             </div>
             <div className="card p-4 text-center">
-              <Clock className="h-6 w-6 text-primary-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-neutral-900">{modules.length}</div>
-              <div className="text-sm text-neutral-600">{t('modules.title')}</div>
+              <Award className="h-6 w-6 text-yellow-500 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-neutral-900">{user?.coins || 0}</div>
+              <div className="text-sm text-neutral-600">{t('profile.coins', { defaultValue: 'Коинов' })}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Subscription Info */}
+        {course.hasAccess && course.subscriptionType === 'PAID' && (course as any).accessEndDate && (
+          <div className="card p-6 md:p-8 mb-6 border-2 border-primary-200">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">Подписка активна</h3>
+                <p className="text-sm text-neutral-600">
+                  Подписка истекает: {new Date((course as any).accessEndDate).toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </p>
+                {new Date((course as any).accessEndDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) && (
+                  <p className="text-sm text-orange-600 mt-2">
+                    ⚠️ Подписка истечет через {Math.ceil((new Date((course as any).accessEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} дней
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowExtendModal(true)}
+                className="btn-primary"
+              >
+                Продлить подписку
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Expired Subscription */}
+        {course.hasAccess === false && (course as any).isSubscriptionExpired && course.subscriptionType === 'PAID' && (
+          <div className="card p-6 md:p-8 mb-6 border-2 border-red-200 bg-red-50">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-red-900 mb-2">Подписка истекла</h3>
+                <p className="text-sm text-red-700">
+                  Ваша подписка на этот курс закончилась. Продлите подписку для продолжения обучения.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowExtendModal(true)}
+                className="btn-primary"
+              >
+                Продлить подписку
+              </button>
             </div>
           </div>
         )}
@@ -281,6 +361,113 @@ export default function CourseDetails() {
             </p>
           </div>
         )}
+
+        {/* Course Statistics - Always visible */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="card p-4 text-center">
+            <FileText className="h-6 w-6 text-primary-500 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-neutral-900">{modules.length}</div>
+            <div className="text-sm text-neutral-600">{t('modules.title', { defaultValue: 'Модулей' })}</div>
+          </div>
+          <div className="card p-4 text-center">
+            <BookOpen className="h-6 w-6 text-primary-500 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-neutral-900">{lessons.length}</div>
+            <div className="text-sm text-neutral-600">{t('lessons.title', { defaultValue: 'Уроков' })}</div>
+          </div>
+          <div className="card p-4 text-center">
+            <Clock className="h-6 w-6 text-primary-500 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-neutral-900">
+              {lessons.length > 0 ? Math.ceil(lessons.length * 0.5) : 0}
+            </div>
+            <div className="text-sm text-neutral-600">{t('courses.hours', { defaultValue: 'Часов' })}</div>
+          </div>
+          <div className="card p-4 text-center">
+            <Users className="h-6 w-6 text-primary-500 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-neutral-900">{course._count?.studentCourses || 0}</div>
+            <div className="text-sm text-neutral-600">{t('courses.students', { defaultValue: 'Студентов' })}</div>
+          </div>
+        </div>
+
+        {/* Course Advantages/Benefits */}
+        <div className="card p-6 md:p-8 mb-6">
+          <h2 className="text-xl md:text-2xl font-semibold text-neutral-900 mb-6">
+            {t('courses.advantages', { defaultValue: 'Преимущества курса' })}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex items-start gap-3 p-4 bg-neutral-50 rounded-lg">
+              <Calendar className="h-6 w-6 text-primary-500 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-semibold text-neutral-900 mb-1">
+                  {t('courses.flexibleSchedule', { defaultValue: 'Гибкий график' })}
+                </h3>
+                <p className="text-sm text-neutral-600">
+                  {t('courses.flexibleScheduleDesc', { defaultValue: 'Изучайте в удобное для вас время, совмещая с работой и личной жизнью' })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 bg-neutral-50 rounded-lg">
+              <Award className="h-6 w-6 text-primary-500 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-semibold text-neutral-900 mb-1">
+                  {t('courses.certificate', { defaultValue: 'Сертификат' })}
+                </h3>
+                <p className="text-sm text-neutral-600">
+                  {t('courses.certificateDesc', { defaultValue: 'Получите сертификат после успешного завершения курса' })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 bg-neutral-50 rounded-lg">
+              <BookOpen className="h-6 w-6 text-primary-500 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-semibold text-neutral-900 mb-1">
+                  {t('courses.practicalTasks', { defaultValue: 'Практические задания' })}
+                </h3>
+                <p className="text-sm text-neutral-600">
+                  {t('courses.practicalTasksDesc', { defaultValue: 'Закрепляйте знания через практические упражнения и задания' })}
+                </p>
+              </div>
+            </div>
+            {course.subscriptionType === 'PAID' && (
+              <>
+                <div className="flex items-start gap-3 p-4 bg-neutral-50 rounded-lg">
+                  <Clock className="h-6 w-6 text-primary-500 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-neutral-900 mb-1">
+                      {t('courses.lifetimeAccess', { defaultValue: 'Доступ на период подписки' })}
+                    </h3>
+                    <p className="text-sm text-neutral-600">
+                      {t('courses.lifetimeAccessDesc', { defaultValue: 'Доступ к курсу на выбранный период подписки' })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 bg-neutral-50 rounded-lg">
+                  <Users className="h-6 w-6 text-primary-500 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-neutral-900 mb-1">
+                      {t('courses.support', { defaultValue: 'Поддержка преподавателя' })}
+                    </h3>
+                    <p className="text-sm text-neutral-600">
+                      {t('courses.supportDesc', { defaultValue: 'Получайте помощь и ответы на вопросы от преподавателя' })}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+            {course.subscriptionType === 'FREE' && (
+              <div className="flex items-start gap-3 p-4 bg-neutral-50 rounded-lg">
+                <Award className="h-6 w-6 text-primary-500 flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-semibold text-neutral-900 mb-1">
+                    {t('courses.freeAccess', { defaultValue: 'Бесплатный доступ' })}
+                  </h3>
+                  <p className="text-sm text-neutral-600">
+                    {t('courses.freeAccessDesc', { defaultValue: 'Полный доступ к курсу абсолютно бесплатно' })}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Intermediate Tests */}
         {course.hasAccess && tests.length > 0 && (
@@ -315,10 +502,12 @@ export default function CourseDetails() {
           </div>
         )}
 
-        {/* Course Modules/Program */}
-        {course.hasAccess && modules.length > 0 && (
+        {/* Course Modules/Program - Visible to all */}
+        {(modules.length > 0 || lessons.length > 0) && (
           <div className="card p-6 md:p-8 mb-6">
-            <h2 className="text-xl md:text-2xl font-semibold text-neutral-900 mb-6">{t('courses.program', { defaultValue: 'Программа обучения' })}</h2>
+            <h2 className="text-xl md:text-2xl font-semibold text-neutral-900 mb-6">
+              {t('courses.program', { defaultValue: 'Структура курса' })}
+            </h2>
             <div className="space-y-4">
               {modules
                 .sort((a, b) => a.order - b.order)
@@ -350,18 +539,35 @@ export default function CourseDetails() {
                         </span>
                       </div>
                       <div className="ml-12 md:ml-14 space-y-2">
-                        {moduleLessons.map((lesson, lessonIndex) => (
-                          <div
-                            key={lesson.id}
-                            className="flex items-center gap-2 text-neutral-600 hover:text-primary-600 transition-colors"
-                          >
-                            <span className="text-sm font-medium w-6">{startIndex + lessonIndex}.</span>
-                            <span className="text-sm md:text-base">{lesson.title}</span>
-                            {lesson.progress?.completed && (
-                              <CheckCircle className="h-4 w-4 text-green-500 ml-auto" />
-                            )}
-                          </div>
-                        ))}
+                        {moduleLessons.map((lesson, lessonIndex) => {
+                          const hasLessonAccess = course.hasAccess || (course.trialLessonId === lesson.id);
+                          const isLocked = !hasLessonAccess;
+                          
+                          return (
+                            <div
+                              key={lesson.id}
+                              className={`flex items-center gap-2 transition-colors ${
+                                isLocked 
+                                  ? 'text-neutral-400 cursor-not-allowed' 
+                                  : 'text-neutral-600 hover:text-primary-600 cursor-pointer'
+                              }`}
+                              onClick={() => {
+                                if (!isLocked) {
+                                  navigate(`/courses/${id}/lessons/${lesson.id}`);
+                                }
+                              }}
+                            >
+                              <span className="text-sm font-medium w-6">{startIndex + lessonIndex}.</span>
+                              <span className="text-sm md:text-base flex-1">{lesson.title}</span>
+                              {isLocked && (
+                                <Lock className="h-4 w-4 text-neutral-400 ml-auto" />
+                              )}
+                              {!isLocked && lesson.progress?.completed && (
+                                <CheckCircle className="h-4 w-4 text-green-500 ml-auto" />
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -384,14 +590,29 @@ export default function CourseDetails() {
                       });
                       globalLessonIndex += lessonIndex;
                       
+                      const hasLessonAccess = course.hasAccess || (course.trialLessonId === lesson.id);
+                      const isLocked = !hasLessonAccess;
+                      
                       return (
                         <div
                           key={lesson.id}
-                          className="flex items-center gap-2 text-neutral-600 hover:text-primary-600 transition-colors"
+                          className={`flex items-center gap-2 transition-colors ${
+                            isLocked 
+                              ? 'text-neutral-400 cursor-not-allowed' 
+                              : 'text-neutral-600 hover:text-primary-600 cursor-pointer'
+                          }`}
+                          onClick={() => {
+                            if (!isLocked) {
+                              navigate(`/courses/${id}/lessons/${lesson.id}`);
+                            }
+                          }}
                         >
                           <span className="text-sm font-medium w-6">{globalLessonIndex}.</span>
-                          <span className="text-sm md:text-base">{lesson.title}</span>
-                          {lesson.progress?.completed && (
+                          <span className="text-sm md:text-base flex-1">{lesson.title}</span>
+                          {isLocked && (
+                            <Lock className="h-4 w-4 text-neutral-400 ml-auto" />
+                          )}
+                          {!isLocked && lesson.progress?.completed && (
                             <CheckCircle className="h-4 w-4 text-green-500 ml-auto" />
                           )}
                         </div>
@@ -401,6 +622,16 @@ export default function CourseDetails() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+        
+        {/* Empty state for course structure */}
+        {modules.length === 0 && lessons.length === 0 && (
+          <div className="card p-6 md:p-8 mb-6 text-center">
+            <BookOpen className="h-12 w-12 text-neutral-300 mx-auto mb-4" />
+            <p className="text-neutral-500">
+              {t('courses.noStructure', { defaultValue: 'Структура курса пока не добавлена' })}
+            </p>
           </div>
         )}
       </div>
@@ -588,6 +819,20 @@ export default function CourseDetails() {
         coursePrice={course.price}
         teacherTelegram={course.teacher?.telegram}
         isLoading={requestAccessMutation.isLoading}
+      />
+
+      <ExtendSubscriptionModal
+        isOpen={showExtendModal}
+        onClose={() => setShowExtendModal(false)}
+        courseId={course.id}
+        courseTitle={course.title}
+        prices={{
+          price30Days: course.price30Days,
+          price3Months: course.price3Months,
+          price6Months: course.price6Months,
+          price1Year: course.price1Year,
+        }}
+        currentEndDate={(course as any).accessEndDate}
       />
     </div>
   );

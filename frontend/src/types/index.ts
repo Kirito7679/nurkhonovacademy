@@ -59,13 +59,19 @@ export interface Course {
   title: string;
   description?: string | null;
   thumbnailUrl?: string | null;
-  price: number;
+  price: number; // Базовая цена (для обратной совместимости)
   trialLessonId?: string | null;
   teacherId: string;
   isVisible?: boolean;
   language?: SupportedLanguage;
+  category?: 'LANGUAGE' | 'BUSINESS' | 'IT' | 'DESIGN' | 'MARKETING' | 'FINANCE' | 'HEALTH' | 'EDUCATION' | 'OTHER' | null;
   subscriptionType?: 'FREE' | 'TRIAL' | 'PAID' | null;
-  trialPeriodDays?: number | null;
+  trialPeriodDays?: number | null; // Для обратной совместимости
+  // Цены для разных периодов подписки
+  price30Days?: number | null;
+  price3Months?: number | null;
+  price6Months?: number | null;
+  price1Year?: number | null;
   createdAt: string;
   updatedAt: string;
   teacher?: {

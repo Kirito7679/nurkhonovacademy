@@ -8,3 +8,4 @@ ALTER TABLE "users" ADD CONSTRAINT "users_createdBy_fkey"
 
 -- Add index for better query performance
 CREATE INDEX IF NOT EXISTS "users_createdBy_idx" ON "users"("createdBy");
+

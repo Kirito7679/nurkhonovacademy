@@ -15,12 +15,18 @@ const courseSchema = z.object({
   title: z.string().min(1, 'Название курса обязательно'),
   description: z.string().optional(),
   thumbnailUrl: z.string().url('Неверный формат URL').optional().or(z.literal('')),
-  price: z.number().min(0).default(0),
+  price: z.number().min(0).default(0), // Базовая цена (для обратной совместимости)
   trialLessonId: z.string().uuid().optional().or(z.literal('')),
   isVisible: z.boolean().default(true),
   language: z.enum(['ru', 'en', 'uz', 'kk']).default('ru'),
+  category: z.enum(['LANGUAGE', 'BUSINESS', 'IT', 'DESIGN', 'MARKETING', 'FINANCE', 'HEALTH', 'EDUCATION', 'OTHER']).optional(),
   subscriptionType: z.enum(['FREE', 'TRIAL', 'PAID']).optional(),
-  trialPeriodDays: z.number().int().min(0).optional(),
+  trialPeriodDays: z.number().int().min(0).optional(), // Для обратной совместимости
+  // Цены для разных периодов подписки
+  price30Days: z.number().min(0).optional(),
+  price3Months: z.number().min(0).optional(),
+  price6Months: z.number().min(0).optional(),
+  price1Year: z.number().min(0).optional(),
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
@@ -175,8 +181,13 @@ export default function CourseForm() {
       trialLessonId: '',
       isVisible: true,
       language: 'ru',
+      category: undefined,
       subscriptionType: undefined,
       trialPeriodDays: undefined,
+      price30Days: undefined,
+      price3Months: undefined,
+      price6Months: undefined,
+      price1Year: undefined,
     },
   });
 
@@ -190,8 +201,13 @@ export default function CourseForm() {
           trialLessonId: courseResponse.trialLessonId || '',
           isVisible: courseResponse.isVisible !== undefined ? courseResponse.isVisible : true,
           language: courseResponse.language || 'ru',
+          category: courseResponse.category || undefined,
           subscriptionType: courseResponse.subscriptionType || undefined,
           trialPeriodDays: courseResponse.trialPeriodDays || undefined,
+          price30Days: courseResponse.price30Days || undefined,
+          price3Months: courseResponse.price3Months || undefined,
+          price6Months: courseResponse.price6Months || undefined,
+          price1Year: courseResponse.price1Year || undefined,
         });
       if (courseResponse.thumbnailUrl) {
         setThumbnailPreview(courseResponse.thumbnailUrl);
@@ -486,6 +502,33 @@ export default function CourseForm() {
                 )}
               </div>
 
+              <div className="animate-slide-in" style={{ animationDelay: '0.48s' }}>
+                <label htmlFor="category" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Категория курса <span className="text-neutral-500 text-xs">(необязательно)</span>
+                </label>
+                <select
+                  {...register('category')}
+                  className="input-field"
+                >
+                  <option value="">Не выбрана</option>
+                  <option value="LANGUAGE">Языковые</option>
+                  <option value="BUSINESS">Бизнес</option>
+                  <option value="IT">IT и программирование</option>
+                  <option value="DESIGN">Дизайн</option>
+                  <option value="MARKETING">Маркетинг</option>
+                  <option value="FINANCE">Финансы</option>
+                  <option value="HEALTH">Здоровье</option>
+                  <option value="EDUCATION">Образование</option>
+                  <option value="OTHER">Другое</option>
+                </select>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Выберите категорию для лучшей организации курсов
+                </p>
+                {errors.category && (
+                  <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
+                )}
+              </div>
+
               <div className="animate-slide-in" style={{ animationDelay: '0.49s' }}>
                 <label htmlFor="subscriptionType" className="block text-sm font-medium text-neutral-700 mb-2">
                   Тип подписки <span className="text-neutral-500 text-xs">(необязательно)</span>
@@ -522,6 +565,86 @@ export default function CourseForm() {
                   {errors.trialPeriodDays && (
                     <p className="mt-1 text-sm text-red-600">{errors.trialPeriodDays.message}</p>
                   )}
+                </div>
+              )}
+
+              {watch('subscriptionType') === 'PAID' && (
+                <div className="space-y-4 animate-slide-in" style={{ animationDelay: '0.5s' }}>
+                  <div className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                    <h3 className="text-sm font-semibold text-neutral-700 mb-3">Цены для разных периодов подписки</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="price30Days" className="block text-sm font-medium text-neutral-700 mb-2">
+                          Цена за 30 дней (сум) <span className="text-neutral-500 text-xs">(необязательно)</span>
+                        </label>
+                        <input
+                          {...register('price30Days', { valueAsNumber: true })}
+                          type="number"
+                          min="0"
+                          step="1000"
+                          className="input-field"
+                          placeholder="500000"
+                        />
+                        {errors.price30Days && (
+                          <p className="mt-1 text-sm text-red-600">{errors.price30Days.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="price3Months" className="block text-sm font-medium text-neutral-700 mb-2">
+                          Цена за 3 месяца (сум) <span className="text-neutral-500 text-xs">(необязательно)</span>
+                        </label>
+                        <input
+                          {...register('price3Months', { valueAsNumber: true })}
+                          type="number"
+                          min="0"
+                          step="1000"
+                          className="input-field"
+                          placeholder="1200000"
+                        />
+                        {errors.price3Months && (
+                          <p className="mt-1 text-sm text-red-600">{errors.price3Months.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="price6Months" className="block text-sm font-medium text-neutral-700 mb-2">
+                          Цена за 6 месяцев (сум) <span className="text-neutral-500 text-xs">(необязательно)</span>
+                        </label>
+                        <input
+                          {...register('price6Months', { valueAsNumber: true })}
+                          type="number"
+                          min="0"
+                          step="1000"
+                          className="input-field"
+                          placeholder="2000000"
+                        />
+                        {errors.price6Months && (
+                          <p className="mt-1 text-sm text-red-600">{errors.price6Months.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="price1Year" className="block text-sm font-medium text-neutral-700 mb-2">
+                          Цена за год (сум) <span className="text-neutral-500 text-xs">(необязательно)</span>
+                        </label>
+                        <input
+                          {...register('price1Year', { valueAsNumber: true })}
+                          type="number"
+                          min="0"
+                          step="1000"
+                          className="input-field"
+                          placeholder="3500000"
+                        />
+                        {errors.price1Year && (
+                          <p className="mt-1 text-sm text-red-600">{errors.price1Year.message}</p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-neutral-500">
+                      Установите цены для периодов подписки. Студенты смогут выбрать период при запросе доступа или продлении подписки.
+                    </p>
+                  </div>
                 </div>
               )}
 
