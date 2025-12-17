@@ -28,11 +28,15 @@ export default function LessonView() {
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
 
   // Get lesson data
-  const { data: lessonResponse, isLoading } = useQuery(
+  const { data: lessonResponse, isLoading, error: lessonError } = useQuery(
     ['lesson', lessonId],
     async () => {
       const response = await api.get<ApiResponse<Lesson & { course: Course }>>(`/lessons/${lessonId}`);
       return response.data.data;
+    },
+    {
+      enabled: !!lessonId,
+      retry: 1,
     }
   );
 
@@ -292,27 +296,40 @@ export default function LessonView() {
 
   // Group lessons by modules
   const getLessonsByModule = () => {
-    const lessons = lessonsResponse || [];
-    const modules = modulesResponse || [];
-    const lessonsByModule = new Map<string, Lesson[]>();
-    const lessonsWithoutModule: Lesson[] = [];
+    try {
+      const lessons = lessonsResponse || [];
+      const modules = modulesResponse || [];
+      const lessonsByModule = new Map<string, Lesson[]>();
+      const lessonsWithoutModule: Lesson[] = [];
 
-    lessons.forEach((lesson) => {
-      if (lesson.moduleId) {
-        if (!lessonsByModule.has(lesson.moduleId)) {
-          lessonsByModule.set(lesson.moduleId, []);
+      lessons.forEach((l) => {
+        if (l?.moduleId) {
+          if (!lessonsByModule.has(l.moduleId)) {
+            lessonsByModule.set(l.moduleId, []);
+          }
+          lessonsByModule.get(l.moduleId)!.push(l);
+        } else {
+          lessonsWithoutModule.push(l);
         }
-        lessonsByModule.get(lesson.moduleId)!.push(lesson);
-      } else {
-        lessonsWithoutModule.push(lesson);
-      }
-    });
+      });
 
-    lessonsByModule.forEach((moduleLessons) => {
-      moduleLessons.sort((a, b) => a.order - b.order);
-    });
+      lessonsByModule.forEach((moduleLessons) => {
+        moduleLessons.sort((a, b) => (a.order || 0) - (b.order || 0));
+      });
 
-    return { lessonsByModule, lessonsWithoutModule, modules: modules.sort((a, b) => a.order - b.order) };
+      return { 
+        lessonsByModule, 
+        lessonsWithoutModule, 
+        modules: modules.sort((a, b) => (a.order || 0) - (b.order || 0)) 
+      };
+    } catch (error) {
+      console.error('Error grouping lessons by modules:', error);
+      return { 
+        lessonsByModule: new Map<string, Lesson[]>(), 
+        lessonsWithoutModule: [], 
+        modules: [] 
+      };
+    }
   };
 
   // Check if lesson is accessible (completed or has access)
@@ -345,11 +362,33 @@ export default function LessonView() {
     );
   }
 
+  if (lessonError) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 mb-4">
+          {lessonError instanceof Error ? lessonError.message : 'Ошибка при загрузке урока'}
+        </p>
+        <button
+          onClick={() => navigate(`/courses/${courseId}`)}
+          className="btn-primary"
+        >
+          Вернуться к курсу
+        </button>
+      </div>
+    );
+  }
+
   const lesson = lessonResponse;
   if (!lesson) {
     return (
       <div className="text-center py-12">
-        <p className="text-neutral-600">{t('errors.notFound')}</p>
+        <p className="text-neutral-600 mb-4">{t('errors.notFound')}</p>
+        <button
+          onClick={() => navigate(`/courses/${courseId}`)}
+          className="btn-primary"
+        >
+          Вернуться к курсу
+        </button>
       </div>
     );
   }
@@ -365,10 +404,10 @@ export default function LessonView() {
 
   // Auto-expand module containing current lesson
   useEffect(() => {
-    if (lesson.moduleId && !expandedModules.has(lesson.moduleId)) {
-      setExpandedModules(new Set([...expandedModules, lesson.moduleId]));
+    if (lesson?.moduleId && !expandedModules.has(lesson.moduleId)) {
+      setExpandedModules(prev => new Set([...prev, lesson.moduleId!]));
     }
-  }, [lesson.moduleId, expandedModules]);
+  }, [lesson?.moduleId]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
