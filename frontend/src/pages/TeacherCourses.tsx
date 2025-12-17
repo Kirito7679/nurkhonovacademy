@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { ApiResponse, Course } from '../types';
 import { BookOpen, Plus, Edit, Grid3x3, List } from 'lucide-react';
+import { getLanguageInfo, getCategoryLabel, getCategoryColor } from '../utils/courseUtils';
 
 type ViewMode = 'grid' | 'list';
 

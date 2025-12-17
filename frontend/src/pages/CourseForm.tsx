@@ -10,6 +10,8 @@ import { ArrowLeft, Save, Image as ImageIcon, Plus, Trash2, Edit2, ChevronDown, 
 import { useState, useEffect, useRef } from 'react';
 import ErrorModal from '../components/ErrorModal';
 import ConfirmModal from '../components/ConfirmModal';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const courseSchema = z.object({
   title: z.string().min(1, 'Название курса обязательно'),
@@ -394,12 +396,61 @@ export default function CourseForm() {
                 <label htmlFor="description" className="block text-sm font-medium text-neutral-700 mb-2">
                   {t('courses.courseDescription')}
                 </label>
-                <textarea
-                  {...register('description')}
-                  rows={4}
-                  className="input-field"
-                  placeholder={t('courses.courseDescription')}
-                />
+                <div className="rich-text-editor">
+                  <ReactQuill
+                    theme="snow"
+                    value={watch('description') || ''}
+                    onChange={(value) => {
+                      setValue('description', value, { shouldValidate: true });
+                    }}
+                    modules={{
+                      toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'align': [] }],
+                        ['link'],
+                        ['clean']
+                      ],
+                    }}
+                    formats={[
+                      'header',
+                      'bold', 'italic', 'underline', 'strike',
+                      'list', 'bullet',
+                      'color', 'background',
+                      'align',
+                      'link'
+                    ]}
+                    placeholder={t('courses.courseDescription')}
+                    className="bg-white"
+                  />
+                </div>
+                <style>{`
+                  .rich-text-editor .ql-container {
+                    min-height: 200px;
+                    font-size: 14px;
+                  }
+                  .rich-text-editor .ql-editor {
+                    min-height: 200px;
+                  }
+                  .rich-text-editor .ql-toolbar {
+                    border-top-left-radius: 8px;
+                    border-top-right-radius: 8px;
+                    border: 1px solid #e5e7eb;
+                    background: #f9fafb;
+                  }
+                  .rich-text-editor .ql-container {
+                    border-bottom-left-radius: 8px;
+                    border-bottom-right-radius: 8px;
+                    border: 1px solid #e5e7eb;
+                    border-top: none;
+                  }
+                  .rich-text-editor .ql-editor.ql-blank::before {
+                    color: #9ca3af;
+                    font-style: normal;
+                  }
+                `}</style>
               </div>
 
               <div className="animate-slide-in" style={{ animationDelay: '0.3s' }}>
@@ -975,12 +1026,36 @@ export default function CourseForm() {
               <label htmlFor="description" className="block text-sm font-medium text-neutral-700 mb-2">
                 Описание курса
               </label>
-              <textarea
-                {...register('description')}
-                rows={4}
-                className="input-field"
-                placeholder="Введите описание курса"
-              />
+              <div className="rich-text-editor">
+                <ReactQuill
+                  theme="snow"
+                  value={watch('description') || ''}
+                  onChange={(value) => {
+                    setValue('description', value, { shouldValidate: true });
+                  }}
+                  modules={{
+                    toolbar: [
+                      [{ 'header': [1, 2, 3, false] }],
+                      ['bold', 'italic', 'underline', 'strike'],
+                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                      [{ 'color': [] }, { 'background': [] }],
+                      [{ 'align': [] }],
+                      ['link'],
+                      ['clean']
+                    ],
+                  }}
+                  formats={[
+                    'header',
+                    'bold', 'italic', 'underline', 'strike',
+                    'list', 'bullet',
+                    'color', 'background',
+                    'align',
+                    'link'
+                  ]}
+                  placeholder="Введите описание курса"
+                  className="bg-white"
+                />
+              </div>
             </div>
 
             <div className="animate-slide-in" style={{ animationDelay: '0.3s' }}>
