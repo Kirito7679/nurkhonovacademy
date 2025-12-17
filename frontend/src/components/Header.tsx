@@ -25,7 +25,7 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           <Link 
             to={isTeacher ? '/teacher/dashboard' : '/dashboard'} 
-            className="text-lg md:text-xl font-bold text-gradient animate-slide-in flex items-center gap-2 hover:opacity-90 transition-opacity overflow-visible -ml-1 md:-ml-0"
+            className="text-lg md:text-xl font-bold text-gradient animate-slide-in flex items-center gap-2 hover:opacity-90 transition-opacity overflow-visible -ml-1 md:-ml-0 self-center"
           >
             <Logo className="h-12 md:h-14" />
           </Link>
