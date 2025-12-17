@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
-import { LogOut, User, Home, Settings, HelpCircle, Zap, Languages } from 'lucide-react';
+import { LogOut, User, Home, HelpCircle } from 'lucide-react';
 import { Role } from '../types';
 import NotificationBell from './NotificationBell';
 import Logo from './Logo';
@@ -22,6 +22,11 @@ export default function Header() {
   };
 
   const isTeacher = user?.role === Role.TEACHER || user?.role === Role.ADMIN || user?.role === Role.CURATOR;
+
+  const handleSupportClick = () => {
+    window.open('https://t.me/Nurkhonov_Dilmurod', '_blank', 'noopener,noreferrer');
+    setIsProfileMenuOpen(false);
+  };
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -97,11 +102,11 @@ export default function Header() {
                       className="flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50 transition-colors"
                     >
                       <Home size={18} className="text-primary-600" />
-                      <span>{t('dashboard.title', { defaultValue: 'Главная' })}</span>
+                      <span>{t('dashboard.title', { defaultValue: 'Панель управления' })}</span>
                     </Link>
 
                     <Link
-                      to="/profile"
+                      to="/settings"
                       onClick={() => setIsProfileMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50 transition-colors"
                     >
@@ -109,36 +114,17 @@ export default function Header() {
                       <span>{t('profile.title', { defaultValue: 'Профиль' })}</span>
                     </Link>
 
-                    <Link
-                      to="/integrations"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50 transition-colors"
-                    >
-                      <Zap size={18} className="text-primary-600" />
-                      <span>OSNOVA+</span>
-                    </Link>
-
                     <div className="px-4 py-2">
                       <LanguageToggle />
                     </div>
 
-                    <Link
-                      to="/settings"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50 transition-colors"
-                    >
-                      <Settings size={18} className="text-primary-600" />
-                      <span>{t('settings.title', { defaultValue: 'Настройка' })}</span>
-                    </Link>
-
-                    <Link
-                      to="/support"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50 transition-colors"
+                    <button
+                      onClick={handleSupportClick}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50 transition-colors"
                     >
                       <HelpCircle size={18} className="text-primary-600" />
                       <span>{t('support.title', { defaultValue: 'Служба поддержки' })}</span>
-                    </Link>
+                    </button>
 
                     <div className="border-t border-neutral-200 my-1"></div>
 
