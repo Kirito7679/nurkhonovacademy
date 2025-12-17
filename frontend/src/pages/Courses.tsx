@@ -118,8 +118,8 @@ const Courses = memo(function Courses() {
   return (
     <div>
       <div className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <h1 className="text-3xl md:text-5xl font-bold text-gradient">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6 mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gradient">
             {t('courses.title')}
           </h1>
           
@@ -148,23 +148,26 @@ const Courses = memo(function Courses() {
               <List className="h-5 w-5" />
             </button>
           </div>
+        </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex flex-col gap-4 mb-6">
           {/* Search */}
-          <div className="flex-1 relative">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400 pointer-events-none z-10" />
             <input
               type="text"
               placeholder={t('courses.searchPlaceholder', { defaultValue: 'Поиск курсов...' })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input-field pl-11"
+              className="input-field pl-11 w-full"
             />
           </div>
 
+          {/* Filters Row */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           {/* Status Filter */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 sm:flex-none sm:min-w-[160px]">
             <Filter className={`h-5 w-5 ${statusFilter !== 'all' ? 'text-primary-600' : 'text-neutral-400'} hidden md:block transition-colors`} />
             <select
               value={statusFilter}
@@ -190,11 +193,11 @@ const Courses = memo(function Courses() {
           </div>
 
           {/* Category Filter */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 sm:flex-none sm:min-w-[180px]">
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}
-              className={`input-field flex-1 md:flex-none transition-all ${
+              className={`input-field flex-1 sm:flex-none sm:min-w-[180px] transition-all ${
                 categoryFilter !== 'all' ? 'border-primary-400 bg-primary-50/50' : ''
               }`}
             >
@@ -221,11 +224,11 @@ const Courses = memo(function Courses() {
           </div>
 
           {/* Sort */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 sm:flex-none sm:min-w-[200px]">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className="input-field flex-1 md:flex-none"
+              className="input-field flex-1 sm:flex-none sm:min-w-[150px]"
             >
               <option value="createdAt">{t('courses.sortByDate', { defaultValue: 'По дате' })}</option>
               <option value="title">{t('courses.sortByTitle', { defaultValue: 'По названию' })}</option>
@@ -233,7 +236,7 @@ const Courses = memo(function Courses() {
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className={`px-3 md:px-4 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-700 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all text-sm md:text-base ${
+              className={`px-3 md:px-4 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-700 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all text-sm md:text-base flex-shrink-0 ${
                 sortOrder === 'asc' ? 'border-primary-400 bg-primary-50/50' : ''
               }`}
               title={sortOrder === 'asc' ? t('courses.sortAsc', { defaultValue: 'По возрастанию' }) : t('courses.sortDesc', { defaultValue: 'По убыванию' })}
@@ -242,8 +245,10 @@ const Courses = memo(function Courses() {
             </button>
           </div>
         </div>
+        </div>
       </div>
 
+      {/* Course List */}
       {isLoading ? (
         <div className="space-y-6">
           {viewMode === 'grid' ? (
@@ -288,7 +293,7 @@ const Courses = memo(function Courses() {
         </div>
       ) : viewMode === 'grid' ? (
         // Grid View
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
           {courses.map((course, index) => (
             <Link
               key={course.id}
@@ -325,27 +330,29 @@ const Courses = memo(function Courses() {
                   </div>
                 </div>
               )}
-              <div className="p-4 md:p-6">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                  <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors break-words flex-1">
-                    {course.title}
-                  </h3>
-                  <div className="flex-shrink-0">{getStatusBadge(course)}</div>
+              <div className="p-5 md:p-6 lg:p-7">
+                <div className="flex flex-col gap-3 mb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors break-words flex-1 leading-tight">
+                      {course.title}
+                    </h3>
+                    <div className="flex-shrink-0">{getStatusBadge(course)}</div>
+                  </div>
+                  {course.description && (
+                    <div 
+                      className="text-gray-400 text-sm md:text-base mb-4 line-clamp-3 break-words prose prose-sm max-w-none leading-relaxed"
+                      dangerouslySetInnerHTML={{ 
+                        __html: DOMPurify.sanitize(course.description, { 
+                          ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
+                          ALLOWED_ATTR: ['class']
+                        }) 
+                      }}
+                    />
+                  )}
                 </div>
-                {course.description && (
-                  <div 
-                    className="text-gray-400 text-xs md:text-sm mb-4 line-clamp-2 break-words prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ 
-                      __html: DOMPurify.sanitize(course.description, { 
-                        ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
-                        ALLOWED_ATTR: ['class']
-                      }) 
-                    }}
-                  />
-                )}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm text-neutral-500">
-                    <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
+                <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+                  <div className="flex items-center text-sm md:text-base text-neutral-500">
+                    <BookOpen className="h-4 w-4 md:h-5 md:w-5 mr-2 text-primary-500" />
                     <span>{course._count?.lessons || 0} {t('lessons.lessonsCount', { count: course._count?.lessons || 0, defaultValue: 'уроков' })}</span>
                   </div>
                 </div>
@@ -355,7 +362,7 @@ const Courses = memo(function Courses() {
         </div>
       ) : (
         // List View
-        <div className="space-y-4">
+        <div className="space-y-4 md:space-y-6">
           {courses.map((course, index) => (
             <Link
               key={course.id}
@@ -363,9 +370,9 @@ const Courses = memo(function Courses() {
               className="card card-hover group animate-slide-in"
               style={{ animationDelay: `${0.05 * index}s` }}
             >
-              <div className="flex flex-col md:flex-row gap-3 md:gap-4 p-4 md:p-6">
-                    {course.thumbnailUrl && (
-                      <div className="flex-shrink-0 w-full md:w-48 h-32 overflow-hidden rounded-lg">
+              <div className="flex flex-col md:flex-row gap-4 md:gap-6 p-5 md:p-6 lg:p-8">
+                {course.thumbnailUrl && (
+                  <div className="flex-shrink-0 w-full md:w-56 lg:w-64 h-40 md:h-44 lg:h-48 overflow-hidden rounded-lg">
                         <img
                           src={course.thumbnailUrl}
                           alt={course.title || 'Course thumbnail'}
@@ -377,44 +384,46 @@ const Courses = memo(function Courses() {
                         />
                   </div>
                 )}
-                <div className="flex-1 flex flex-col justify-between">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        {getLanguageInfo(course.language) && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white border border-neutral-200 shadow-sm">
-                            <span className="mr-1">{getLanguageInfo(course.language)!.flag}</span>
-                            <span>{getLanguageInfo(course.language)!.label}</span>
-                          </span>
-                        )}
-                        {course.category && (
-                          <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getCategoryColor(course.category)}`}>
-                            {getCategoryLabel(course.category)}
-                          </span>
+                <div className="flex-1 flex flex-col justify-between min-w-0">
+                  <div className="mb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          {getLanguageInfo(course.language) && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white border border-neutral-200 shadow-sm">
+                              <span className="mr-1">{getLanguageInfo(course.language)!.flag}</span>
+                              <span>{getLanguageInfo(course.language)!.label}</span>
+                            </span>
+                          )}
+                          {course.category && (
+                            <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getCategoryColor(course.category)}`}>
+                              {getCategoryLabel(course.category)}
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-2 break-words leading-tight">
+                          {course.title}
+                        </h3>
+                        {course.description && (
+                          <div 
+                            className="text-gray-400 text-sm md:text-base mb-4 line-clamp-3 break-words prose prose-sm max-w-none leading-relaxed"
+                            dangerouslySetInnerHTML={{ 
+                              __html: DOMPurify.sanitize(course.description, { 
+                                ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
+                                ALLOWED_ATTR: ['class']
+                              }) 
+                            }}
+                          />
                         )}
                       </div>
-                      <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-1 break-words">
-                        {course.title}
-                      </h3>
-                      {course.description && (
-                        <div 
-                          className="text-gray-400 text-xs md:text-sm mb-3 line-clamp-2 break-words prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{ 
-                            __html: DOMPurify.sanitize(course.description, { 
-                              ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
-                              ALLOWED_ATTR: ['class']
-                            }) 
-                          }}
-                        />
-                      )}
-                    </div>
-                    <div className="flex-shrink-0 sm:ml-4">
-                      {getStatusBadge(course)}
+                      <div className="flex-shrink-0 sm:ml-4">
+                        {getStatusBadge(course)}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-sm text-neutral-500">
-                      <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
+                  <div className="flex items-center justify-between pt-3 border-t border-neutral-100">
+                    <div className="flex items-center text-sm md:text-base text-neutral-500">
+                      <BookOpen className="h-4 w-4 md:h-5 md:w-5 mr-2 text-primary-500" />
                       <span>{course._count?.lessons || 0} {t('lessons.lessonsCount', { count: course._count?.lessons || 0, defaultValue: 'уроков' })}</span>
                     </div>
                   </div>
@@ -424,7 +433,6 @@ const Courses = memo(function Courses() {
           ))}
         </div>
       )}
-    </div>
     </div>
   );
 });
