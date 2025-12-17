@@ -22,12 +22,12 @@ export default function Header() {
   return (
     <header className="bg-white/95 backdrop-blur-md border-b-2 border-primary-200/50 sticky top-0 z-50 shadow-education">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 py-2">
+        <div className="flex items-center justify-between h-16 py-1">
           <Link 
             to={isTeacher ? '/teacher/dashboard' : '/dashboard'} 
-            className="text-lg md:text-xl font-bold text-gradient animate-slide-in flex items-center gap-2 hover:opacity-90 transition-opacity overflow-visible"
+            className="text-lg md:text-xl font-bold text-gradient animate-slide-in flex items-center gap-2 hover:opacity-90 transition-opacity overflow-visible -mt-1"
           >
-            <Logo className="h-10 md:h-12" />
+            <Logo className="h-12 md:h-14" />
           </Link>
           
           <div className="flex items-center gap-2 md:gap-4">
