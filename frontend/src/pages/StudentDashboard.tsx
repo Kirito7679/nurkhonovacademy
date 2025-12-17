@@ -284,20 +284,9 @@ export default function StudentDashboard() {
                 </div>
               )}
               <div className="p-4 md:p-6">
-                <h3 className="text-lg md:text-xl font-semibold text-primary-900 mb-2 group-hover:text-primary-700 transition-colors break-words">
+                <h3 className="text-lg md:text-xl font-semibold text-primary-900 mb-3 group-hover:text-primary-700 transition-colors break-words">
                   {course.title}
                 </h3>
-                {course.description && (
-                  <div 
-                    className="text-primary-700 text-xs md:text-sm mb-4 line-clamp-2 break-words prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ 
-                      __html: DOMPurify.sanitize(course.description, { 
-                        ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
-                        ALLOWED_ATTR: ['class']
-                      }) 
-                    }}
-                  />
-                )}
                 <div className="flex items-center text-sm text-primary-600 font-medium">
                   <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
                   <span>{course._count?.lessons || 0} {t('lessons.lessonsCount', { count: course._count?.lessons || 0, defaultValue: course._count?.lessons === 1 ? 'урок' : 'уроков' })}</span>

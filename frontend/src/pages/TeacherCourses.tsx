@@ -133,20 +133,9 @@ export default function TeacherCourses() {
                 </div>
               )}
               <div className="p-4 md:p-6">
-                <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-2 break-words">
+                <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-3 break-words">
                   {course.title}
                 </h3>
-                {course.description && (
-                  <div 
-                    className="text-neutral-600 text-xs md:text-sm mb-4 line-clamp-2 break-words prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ 
-                      __html: DOMPurify.sanitize(course.description, { 
-                        ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
-                        ALLOWED_ATTR: ['class']
-                      }) 
-                    }}
-                  />
-                )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-sm text-neutral-500">
                     <BookOpen className="h-4 w-4 mr-2 text-primary-500" />
@@ -184,20 +173,9 @@ export default function TeacherCourses() {
                 )}
                 <div className="flex-1 flex flex-col justify-between">
                   <div className="mb-2">
-                    <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-1 break-words">
+                    <h3 className="text-lg md:text-xl font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors mb-3 break-words">
                       {course.title}
                     </h3>
-                    {course.description && (
-                      <div 
-                        className="text-neutral-600 text-xs md:text-sm mb-3 line-clamp-2 break-words prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ 
-                          __html: DOMPurify.sanitize(course.description, { 
-                            ALLOWED_TAGS: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'span'],
-                            ALLOWED_ATTR: ['class']
-                          }) 
-                        }}
-                      />
-                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center text-sm text-neutral-500">
