@@ -3,15 +3,16 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from 'react-i18next';
 import ReactPlayer from 'react-player';
 import api from '../services/api';
-import { Lesson, ApiResponse, PracticeExercise, FlashcardDeck, ExternalIntegration } from '../types';
-import { ArrowLeft, Download, CheckCircle, ChevronLeft, ChevronRight, Trash2, BookOpen } from 'lucide-react';
+import { Lesson, ApiResponse, PracticeExercise, FlashcardDeck, ExternalIntegration, Course, Module } from '../types';
+import { ArrowLeft, Download, CheckCircle, ChevronLeft, ChevronRight, Trash2, BookOpen, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import { getVideoEmbedUrl, detectVideoSource } from '../utils/validation';
 import CommentsSection from '../components/CommentsSection';
 import LessonQuiz from '../components/Quiz';
 import { useAuthStore } from '../store/authStore';
 import { Role } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getCategoryLabel, getCategoryColor } from '../utils/courseUtils';
 
 export default function LessonView() {
   const { t } = useTranslation();
@@ -23,16 +24,49 @@ export default function LessonView() {
     isOpen: false,
     fileId: null,
   });
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
 
+  // Get lesson data
   const { data: lessonResponse, isLoading } = useQuery(
     ['lesson', lessonId],
     async () => {
-      const response = await api.get<ApiResponse<Lesson>>(`/lessons/${lessonId}`);
+      const response = await api.get<ApiResponse<Lesson & { course: Course }>>(`/lessons/${lessonId}`);
       return response.data.data;
     }
   );
 
-  // Get practice exercises for the lesson
+  // Get course data for category
+  const { data: courseResponse } = useQuery(
+    ['course', courseId],
+    async () => {
+      const response = await api.get<ApiResponse<Course>>(`/courses/${courseId}`);
+      return response.data.data;
+    },
+    { enabled: !!courseId }
+  );
+
+  // Get modules
+  const { data: modulesResponse } = useQuery(
+    ['modules', courseId],
+    async () => {
+      const response = await api.get<ApiResponse<Module[]>>(`/modules/courses/${courseId}/modules`);
+      return response.data.data || [];
+    },
+    { enabled: !!courseId }
+  );
+
+  // Get all lessons in the course
+  const { data: lessonsResponse } = useQuery(
+    ['courseLessons', courseId],
+    async () => {
+      const response = await api.get<ApiResponse<Lesson[]>>(`/courses/${courseId}/lessons`);
+      return response.data.data || [];
+    },
+    { enabled: !!courseId }
+  );
+
+  // Get practice exercises
   const { data: exercisesResponse } = useQuery(
     ['practiceExercises', lessonId],
     async () => {
@@ -46,7 +80,7 @@ export default function LessonView() {
     { enabled: !!lessonId }
   );
 
-  // Get flashcard decks for the lesson
+  // Get flashcard decks
   const { data: flashcardDecksResponse } = useQuery(
     ['flashcardDecks', lessonId],
     async () => {
@@ -62,7 +96,7 @@ export default function LessonView() {
     { enabled: !!lessonId }
   );
 
-  // Get integrations for the lesson
+  // Get integrations
   const { data: integrationsResponse } = useQuery(
     ['integrations', lessonId],
     async () => {
@@ -78,17 +112,6 @@ export default function LessonView() {
     { enabled: !!lessonId }
   );
 
-
-  // Get all lessons in the course to find previous/next
-  const { data: lessonsResponse } = useQuery(
-    ['courseLessons', courseId],
-    async () => {
-      const response = await api.get<ApiResponse<Lesson[]>>(`/courses/${courseId}/lessons`);
-      return response.data.data || [];
-    },
-    { enabled: !!courseId }
-  );
-
   const updateProgressMutation = useMutation(
     async (data: { completed?: boolean; lastPosition?: number }) => {
       const response = await api.put<ApiResponse<{ completed: boolean; lastPosition: number }>>(`/lessons/${lessonId}/progress`, data);
@@ -97,6 +120,24 @@ export default function LessonView() {
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['lesson', lessonId]);
+        queryClient.invalidateQueries(['courseLessons', courseId]);
+      },
+    }
+  );
+
+  const submitFeedbackMutation = useMutation(
+    async (rating: number) => {
+      // TODO: Implement feedback API endpoint
+      try {
+        await api.post(`/lessons/${lessonId}/feedback`, { rating });
+      } catch (error) {
+        // If endpoint doesn't exist, just log (non-critical feature)
+        console.log('Feedback endpoint not implemented yet');
+      }
+    },
+    {
+      onSuccess: () => {
+        // Keep rating visible after submission
       },
     }
   );
@@ -119,7 +160,6 @@ export default function LessonView() {
   };
 
   const handleDownload = async (e: React.MouseEvent<HTMLButtonElement>, fileUrl: string, fileName: string) => {
-    // Prevent default behavior and stop propagation immediately
     e.preventDefault();
     e.stopPropagation();
     if (e.nativeEvent) {
@@ -127,29 +167,18 @@ export default function LessonView() {
     }
     
     try {
-      // Decode fileName if it's encoded incorrectly (fix Cyrillic mojibake)
       let decodedFileName = fileName;
       try {
-        // Check for mojibake characters (Đ, Ñ, €, Ð, £)
         if (/[ĐÑ€Ð£]/.test(fileName)) {
-          // Try to fix double-encoded UTF-8
-          // Convert from latin1 interpretation to utf8
-          try {
-            const bytes = new Uint8Array(fileName.length);
-            for (let i = 0; i < fileName.length; i++) {
-              bytes[i] = fileName.charCodeAt(i) & 0xFF;
-            }
-            decodedFileName = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-            
-            // If still has mojibake, try escape/decode
-            if (/[ĐÑ€Ð£]/.test(decodedFileName)) {
-              decodedFileName = decodeURIComponent(escape(fileName));
-            }
-          } catch {
+          const bytes = new Uint8Array(fileName.length);
+          for (let i = 0; i < fileName.length; i++) {
+            bytes[i] = fileName.charCodeAt(i) & 0xFF;
+          }
+          decodedFileName = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+          if (/[ĐÑ€Ð£]/.test(decodedFileName)) {
             decodedFileName = decodeURIComponent(escape(fileName));
           }
         } else if (fileName.includes('%')) {
-          // Try URL decoding
           try {
             decodedFileName = decodeURIComponent(fileName);
           } catch {
@@ -160,9 +189,7 @@ export default function LessonView() {
         decodedFileName = fileName;
       }
       
-      // If file is from Supabase or Cloudinary (direct URL), download it
       if (fileUrl.includes('supabase.co') || fileUrl.includes('cloudinary.com') || (fileUrl.startsWith('http') && !fileUrl.includes('/api/files/'))) {
-        // For cloud storage, fetch the file first to ensure proper download without page reload
         try {
           const response = await fetch(fileUrl, { mode: 'cors' });
           if (!response.ok) throw new Error('Failed to fetch file');
@@ -174,7 +201,6 @@ export default function LessonView() {
           link.style.display = 'none';
           document.body.appendChild(link);
           link.click();
-          // Clean up after a short delay
           setTimeout(() => {
             if (document.body.contains(link)) {
               document.body.removeChild(link);
@@ -183,7 +209,6 @@ export default function LessonView() {
           }, 100);
         } catch (fetchError) {
           console.error('Error fetching cloud file:', fetchError);
-          // Fallback: direct link (but this might open in new tab)
           const link = document.createElement('a');
           link.href = fileUrl;
           link.download = decodedFileName;
@@ -199,13 +224,11 @@ export default function LessonView() {
           }, 100);
         }
       } else {
-        // If file is from local storage, use download endpoint
         const fileId = fileUrl.replace('/api/files/download/', '');
         const response = await api.get(`/files/download/${fileId}`, {
           responseType: 'blob',
         });
         
-        // Create blob and download
         const blob = new Blob([response.data]);
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -214,7 +237,6 @@ export default function LessonView() {
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
-        // Clean up after a short delay
         setTimeout(() => {
           if (document.body.contains(link)) {
             document.body.removeChild(link);
@@ -224,7 +246,6 @@ export default function LessonView() {
       }
     } catch (error: any) {
       console.error('Error downloading file:', error);
-      // Fallback: try to open URL directly in new tab (but prevent page reload)
       try {
         const link = document.createElement('a');
         link.href = fileUrl;
@@ -243,7 +264,6 @@ export default function LessonView() {
       }
     }
     
-    // Return false to prevent any default behavior
     return false;
   };
 
@@ -253,6 +273,65 @@ export default function LessonView() {
 
   const handleVideoEnd = () => {
     updateProgressMutation.mutate({ completed: true });
+  };
+
+  const toggleModule = (moduleId: string) => {
+    const newExpanded = new Set(expandedModules);
+    if (newExpanded.has(moduleId)) {
+      newExpanded.delete(moduleId);
+    } else {
+      newExpanded.add(moduleId);
+    }
+    setExpandedModules(newExpanded);
+  };
+
+  const handleFeedbackClick = (rating: number) => {
+    setFeedbackRating(rating);
+    submitFeedbackMutation.mutate(rating);
+  };
+
+  // Group lessons by modules
+  const getLessonsByModule = () => {
+    const lessons = lessonsResponse || [];
+    const modules = modulesResponse || [];
+    const lessonsByModule = new Map<string, Lesson[]>();
+    const lessonsWithoutModule: Lesson[] = [];
+
+    lessons.forEach((lesson) => {
+      if (lesson.moduleId) {
+        if (!lessonsByModule.has(lesson.moduleId)) {
+          lessonsByModule.set(lesson.moduleId, []);
+        }
+        lessonsByModule.get(lesson.moduleId)!.push(lesson);
+      } else {
+        lessonsWithoutModule.push(lesson);
+      }
+    });
+
+    lessonsByModule.forEach((moduleLessons) => {
+      moduleLessons.sort((a, b) => a.order - b.order);
+    });
+
+    return { lessonsByModule, lessonsWithoutModule, modules: modules.sort((a, b) => a.order - b.order) };
+  };
+
+  // Check if lesson is accessible (completed or has access)
+  const isLessonAccessible = (lesson: Lesson): boolean => {
+    if (!user || user.role !== 'STUDENT') return true;
+    if (lesson.progress?.completed) return true;
+    
+    // Check if it's the first lesson or previous is completed
+    const lessons = lessonsResponse || [];
+    const sortedLessons = [...lessons].sort((a, b) => a.order - b.order);
+    const currentIndex = sortedLessons.findIndex(l => l.id === lesson.id);
+    
+    if (currentIndex === 0) return true;
+    if (currentIndex > 0) {
+      const previousLesson = sortedLessons[currentIndex - 1];
+      return previousLesson.progress?.completed || false;
+    }
+    
+    return false;
   };
 
   if (isLoading) {
@@ -275,317 +354,393 @@ export default function LessonView() {
     );
   }
 
-  // Find previous and next lessons
+  const course = courseResponse;
+  const { lessonsByModule, lessonsWithoutModule, modules } = getLessonsByModule();
   const lessons = lessonsResponse || [];
   const currentIndex = lessons.findIndex((l) => l.id === lessonId);
-  const previousLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null;
   const nextLesson = currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
 
   const videoUrl = lesson.videoUrl ? getVideoEmbedUrl(lesson.videoUrl) : null;
   const videoSource = lesson.videoUrl ? detectVideoSource(lesson.videoUrl) : null;
 
-  return (
-    <div>
-      <button
-        onClick={() => navigate(`/courses/${courseId}`)}
-        className="flex items-center text-neutral-600 hover:text-primary-600 mb-6 transition-colors group"
-      >
-        <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-        Назад к курсу
-      </button>
+  // Auto-expand module containing current lesson
+  useEffect(() => {
+    if (lesson.moduleId && !expandedModules.has(lesson.moduleId)) {
+      setExpandedModules(new Set([...expandedModules, lesson.moduleId]));
+    }
+  }, [lesson.moduleId, expandedModules]);
 
-      <div className="card rounded-lg shadow-soft border border-neutral-200 p-4 md:p-6 mb-6 animate-fade-scale">
-        <h1 className="text-xl md:text-2xl lg:text-4xl font-bold text-gradient mb-4 break-words">
-          {lesson.title}
-        </h1>
-        {lesson.description && (
-          <p className="text-neutral-600 mb-6">
-            {lesson.description}
-          </p>
-        )}
-        {lesson.progress?.completed && (
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700 border border-green-200">
-            <CheckCircle className="h-4 w-4 mr-1 text-green-700" />
-            {t('lessons.completed')}
+  return (
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Main Content Area - Left */}
+      <div className="flex-1 space-y-6">
+        {/* Back Button and Title */}
+        <div>
+          <button
+            onClick={() => navigate(`/courses/${courseId}`)}
+            className="flex items-center text-neutral-600 hover:text-primary-600 mb-4 transition-colors group"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+            Назад
+          </button>
+          
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-neutral-900 mb-3 break-words">
+            {lesson.title}
+          </h1>
+
+          {/* Course Category Badge */}
+          {course?.category && (
+            <div className="mb-6">
+              <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium ${getCategoryColor(course.category)}`}>
+                {getCategoryLabel(course.category)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Video Player */}
+        {videoUrl && (
+          <div className="w-full bg-neutral-900 rounded-lg overflow-hidden shadow-lg">
+            <div className="aspect-video">
+              {videoSource === 'google-drive' ? (
+                <iframe
+                  src={videoUrl || ''}
+                  width="100%"
+                  height="100%"
+                  allow="autoplay"
+                  style={{ border: 'none' }}
+                  allowFullScreen
+                />
+              ) : (
+                <ReactPlayer
+                  url={lesson.videoUrl || ''}
+                  width="100%"
+                  height="100%"
+                  controls
+                  onProgress={handleVideoProgress}
+                  onEnded={handleVideoEnd}
+                  config={{
+                    youtube: {
+                      playerVars: {
+                        start: lesson.progress?.lastPosition || 0,
+                      },
+                    },
+                    vimeo: {
+                      playerOptions: {
+                        start: lesson.progress?.lastPosition || 0,
+                      },
+                    },
+                  }}
+                />
+              )}
+            </div>
           </div>
         )}
-      </div>
 
-      {videoUrl && (
-        <div className="card rounded-lg shadow-soft border border-neutral-200 p-4 md:p-6 mb-6 animate-fade-scale" style={{ animationDelay: '0.1s' }}>
-          <h2 className="text-lg md:text-xl font-semibold text-neutral-900 mb-4">
-            {t('lessons.videoLesson', { defaultValue: 'Видео урок' })}
-          </h2>
-          <div className="aspect-video">
-            {videoSource === 'google-drive' ? (
-              // Google Drive requires iframe
-              <iframe
-                src={videoUrl || ''}
-                width="100%"
-                height="100%"
-                allow="autoplay"
-                style={{ border: 'none' }}
-                allowFullScreen
-              />
-            ) : (
-              <ReactPlayer
-                url={lesson.videoUrl || ''}
-                width="100%"
-                height="100%"
-                controls
-                onProgress={handleVideoProgress}
-                onEnded={handleVideoEnd}
-                config={{
-                  youtube: {
-                    playerVars: {
-                      start: lesson.progress?.lastPosition || 0,
-                    },
-                  },
-                  vimeo: {
-                    playerOptions: {
-                      start: lesson.progress?.lastPosition || 0,
-                    },
-                  },
-                }}
-              />
-            )}
+        {/* Feedback Section */}
+        <div className="bg-white border border-neutral-200 rounded-lg p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-2">Как прошел урок?</h3>
+          <p className="text-sm text-neutral-600 mb-4">Нам важна Ваша обратная связь</p>
+          <div className="flex items-center justify-center gap-4">
+            {[1, 2, 3, 4, 5].map((rating) => (
+              <button
+                key={rating}
+                onClick={() => handleFeedbackClick(rating)}
+                className={`text-4xl transition-transform hover:scale-110 ${
+                  feedbackRating === rating ? 'scale-110' : 'opacity-70 hover:opacity-100'
+                }`}
+                disabled={submitFeedbackMutation.isLoading}
+              >
+                {rating === 1 && '😢'}
+                {rating === 2 && '😕'}
+                {rating === 3 && '😐'}
+                {rating === 4 && '🙂'}
+                {rating === 5 && '😄'}
+              </button>
+            ))}
           </div>
         </div>
-      )}
 
-      {lesson.files && lesson.files.length > 0 && (
-        <div className="card rounded-lg shadow-soft border border-neutral-200 p-4 md:p-6 mb-6 animate-fade-scale" style={{ animationDelay: '0.2s' }}>
-          <h2 className="text-lg md:text-xl font-semibold text-neutral-900 mb-4">
-            {t('lessons.files', { defaultValue: 'Файлы урока' })}
-          </h2>
-          <div className="space-y-3">
-            {lesson.files.map((file) => {
-              const isVideo = /\.(mp4|webm|mov|avi|wmv|flv|mpeg)$/i.test(file.fileName);
-              const isDocument = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i.test(file.fileName);
-              const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.fileName);
-              
-              return (
-                <div
-                  key={file.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 md:p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 hover:border-primary-300 transition-all group"
-                >
-                  <div className="flex items-center flex-1 min-w-0">
-                    <div className="flex-shrink-0 mr-3">
-                      {isDocument ? (
-                        <Download className="h-5 w-5 text-blue-500" />
-                      ) : isVideo ? (
-                        <BookOpen className="h-5 w-5 text-purple-500" />
-                      ) : isImage ? (
-                        <Download className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <Download className="h-5 w-5 text-primary-500" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-neutral-900 truncate" title={file.fileName}>
-                        {(() => {
-                          // Try to decode fileName if it's incorrectly encoded (fix Cyrillic mojibake)
-                          try {
-                            const fileName = file.fileName;
-                            // Check for mojibake characters
-                            if (/[ĐÑ€Ð£]/.test(fileName)) {
-                              // Try to fix double-encoded UTF-8
-                              try {
-                                // Convert from latin1 interpretation to utf8
+        {/* Files Section */}
+        {lesson.files && lesson.files.length > 0 && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg md:text-xl font-semibold text-neutral-900 mb-4">
+              {t('lessons.files', { defaultValue: 'Файлы урока' })}
+            </h2>
+            <div className="space-y-3">
+              {lesson.files.map((file) => {
+                const isVideo = /\.(mp4|webm|mov|avi|wmv|flv|mpeg)$/i.test(file.fileName);
+                const isDocument = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i.test(file.fileName);
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.fileName);
+                
+                return (
+                  <div
+                    key={file.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 md:p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 hover:border-primary-300 transition-all group"
+                  >
+                    <div className="flex items-center flex-1 min-w-0">
+                      <div className="flex-shrink-0 mr-3">
+                        {isDocument ? (
+                          <Download className="h-5 w-5 text-blue-500" />
+                        ) : isVideo ? (
+                          <BookOpen className="h-5 w-5 text-purple-500" />
+                        ) : isImage ? (
+                          <Download className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <Download className="h-5 w-5 text-primary-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-neutral-900 truncate" title={file.fileName}>
+                          {(() => {
+                            try {
+                              const fileName = file.fileName;
+                              if (/[ĐÑ€Ð£]/.test(fileName)) {
                                 const bytes = new Uint8Array(fileName.length);
                                 for (let i = 0; i < fileName.length; i++) {
                                   bytes[i] = fileName.charCodeAt(i) & 0xFF;
                                 }
                                 const decoded = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-                                // If still has mojibake, try another approach
                                 if (/[ĐÑ€Ð£]/.test(decoded)) {
-                                  // Try simple escape/decode
                                   return decodeURIComponent(escape(fileName));
                                 }
                                 return decoded;
-                              } catch {
-                                return decodeURIComponent(escape(fileName));
                               }
+                              return fileName;
+                            } catch {
+                              return file.fileName;
                             }
-                            return fileName;
-                          } catch {
-                            return file.fileName;
-                          }
-                        })()}
-                      </p>
-                      <p className="text-sm text-neutral-500">
-                        {t('lessons.fileSize', { defaultValue: 'Размер' })}: {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                        {isVideo && <span className="ml-2 text-purple-600">• Видео</span>}
-                        {isDocument && <span className="ml-2 text-blue-600">• Документ</span>}
-                        {isImage && <span className="ml-2 text-green-600">• Изображение</span>}
-                      </p>
+                          })()}
+                        </p>
+                        <p className="text-sm text-neutral-500">
+                          {t('lessons.fileSize', { defaultValue: 'Размер' })}: {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleDownload(e, file.fileUrl, file.fileName);
-                      }}
-                      className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      {isVideo ? 'Смотреть' : 'Скачать'}
-                    </button>
-                    {canDeleteFile(lesson) && (
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          setDeleteConfirm({ isOpen: true, fileId: file.id });
+                          handleDownload(e, file.fileUrl, file.fileName);
                         }}
-                        className="px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors flex items-center gap-2"
-                        title="Удалить файл"
+                        className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
                       >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="hidden sm:inline">Удалить</span>
+                        <Download className="h-4 w-4" />
+                        {isVideo ? 'Смотреть' : 'Скачать'}
                       </button>
-                    )}
+                      {canDeleteFile(lesson) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDeleteConfirm({ isOpen: true, fileId: file.id });
+                          }}
+                          className="px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors flex items-center gap-2"
+                          title="Удалить файл"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="hidden sm:inline">Удалить</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Practice Exercises */}
+        {exercisesResponse && exercisesResponse.length > 0 && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg md:text-xl font-semibold text-neutral-900 mb-6">
+              {t('practice.title')}
+            </h2>
+            <div className="space-y-6">
+              {exercisesResponse.map((exercise) => (
+                <div key={exercise.id} className="p-4 border border-neutral-200 rounded-lg">
+                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">{exercise.title}</h3>
+                  {exercise.description && (
+                    <p className="text-neutral-600 mb-4">{exercise.description}</p>
+                  )}
+                  <Link
+                    to={`/lessons/${lessonId}/practice`}
+                    className="btn-primary text-sm"
+                  >
+                    {t('practice.execute', { defaultValue: 'Выполнить упражнение' })}
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Flashcards */}
+        {flashcardDecksResponse && flashcardDecksResponse.length > 0 && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg md:text-xl font-semibold text-neutral-900 mb-4">
+              {t('flashcards.title')}
+            </h2>
+            <div className="space-y-4">
+              {flashcardDecksResponse.map((deck) => (
+                <div key={deck.id} className="p-4 border border-neutral-200 rounded-lg">
+                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">{deck.title}</h3>
+                  {deck.description && (
+                    <p className="text-neutral-600 mb-4 text-sm">{deck.description}</p>
+                  )}
+                  <Link
+                    to={`/flashcards/${deck.id}/study`}
+                    className="btn-primary text-sm"
+                  >
+                    {t('flashcards.study')}
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quiz */}
+        <div>
+          <LessonQuiz 
+            lessonId={lessonId!}
+            onComplete={(result) => {
+              if (result.passed) {
+                queryClient.invalidateQueries(['lesson', lessonId]);
+              }
+            }}
+          />
+        </div>
+
+        {/* Comments */}
+        <CommentsSection lessonId={lessonId!} />
+
+        {/* Next Lesson Button */}
+        {nextLesson && (
+          <button
+            onClick={() => navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)}
+            className="w-full bg-neutral-800 hover:bg-neutral-900 text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <span>Следующий урок</span>
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Sidebar - Right */}
+      <div className="w-full lg:w-80 flex-shrink-0">
+        <div className="bg-white border border-neutral-200 rounded-lg shadow-sm sticky top-6">
+          <div className="p-4 border-b border-neutral-200">
+            <h3 className="font-semibold text-neutral-900">Программа курса</h3>
+          </div>
+          <div className="p-2 max-h-[calc(100vh-200px)] overflow-y-auto">
+            {/* Modules */}
+            {modules.map((module) => {
+              const moduleLessons = lessonsByModule.get(module.id) || [];
+              const isExpanded = expandedModules.has(module.id);
+              
+              return (
+                <div key={module.id} className="mb-2">
+                  <button
+                    onClick={() => toggleModule(module.id)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-neutral-50 rounded-lg transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <BookOpen className="h-5 w-5 text-primary-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-neutral-900 truncate">{module.title}</div>
+                        <div className="text-xs text-neutral-500">{moduleLessons.length} уроков</div>
+                      </div>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-neutral-400 flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-neutral-400 flex-shrink-0" />
+                    )}
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {moduleLessons.map((l, index) => {
+                        const isCurrent = l.id === lessonId;
+                        const isAccessible = isLessonAccessible(l);
+                        const isCompleted = l.progress?.completed || false;
+                        
+                        return (
+                          <Link
+                            key={l.id}
+                            to={`/courses/${courseId}/lessons/${l.id}`}
+                            className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
+                              isCurrent
+                                ? 'bg-primary-50 border-l-4 border-primary-600'
+                                : 'hover:bg-neutral-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className="text-sm text-neutral-500 flex-shrink-0">
+                                {String(index + 1).padStart(2, '0')}.
+                              </span>
+                              <span className={`text-sm truncate ${isCurrent ? 'font-semibold text-primary-700' : 'text-neutral-700'}`}>
+                                {l.title}
+                              </span>
+                            </div>
+                            <div className="flex-shrink-0 ml-2">
+                              {isAccessible ? (
+                                <CheckCircle className={`h-4 w-4 ${isCompleted ? 'text-green-500' : 'text-neutral-400'}`} />
+                              ) : (
+                                <Lock className="h-4 w-4 text-neutral-300" />
+                              )}
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
+
+            {/* Lessons without module */}
+            {lessonsWithoutModule.length > 0 && (
+              <div className="mt-4">
+                <div className="text-sm font-medium text-neutral-500 mb-2 px-3">Без модуля</div>
+                <div className="space-y-1">
+                  {lessonsWithoutModule.map((l) => {
+                    const isCurrent = l.id === lessonId;
+                    const isAccessible = isLessonAccessible(l);
+                    const isCompleted = l.progress?.completed || false;
+                    
+                    return (
+                      <Link
+                        key={l.id}
+                        to={`/courses/${courseId}/lessons/${l.id}`}
+                        className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
+                          isCurrent
+                            ? 'bg-primary-50 border-l-4 border-primary-600'
+                            : 'hover:bg-neutral-50'
+                        }`}
+                      >
+                        <span className={`text-sm truncate ${isCurrent ? 'font-semibold text-primary-700' : 'text-neutral-700'}`}>
+                          {l.title}
+                        </span>
+                        <div className="flex-shrink-0 ml-2">
+                          {isAccessible ? (
+                            <CheckCircle className={`h-4 w-4 ${isCompleted ? 'text-green-500' : 'text-neutral-400'}`} />
+                          ) : (
+                            <Lock className="h-4 w-4 text-neutral-300" />
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
-
-      {/* External Integrations Section */}
-      {integrationsResponse && integrationsResponse.length > 0 && (
-        <div className="card rounded-lg shadow-soft border border-neutral-200 p-4 md:p-6 mb-6 animate-fade-scale" style={{ animationDelay: '0.22s' }}>
-          <h2 className="text-lg md:text-xl font-semibold text-neutral-900 mb-4">
-            {t('lessons.additionalMaterials', { defaultValue: 'Дополнительные материалы' })}
-          </h2>
-          <div className="space-y-4">
-            {integrationsResponse.map((integration) => (
-              <div key={integration.id} className="p-4 border border-neutral-200 rounded-lg">
-                <h3 className="font-semibold text-neutral-900 mb-2">{integration.type}</h3>
-                <a
-                  href={integration.externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary text-sm inline-flex items-center gap-2"
-                >
-                  {t('integrations.open')} {integration.type}
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Practice Exercises Section */}
-      {exercisesResponse && exercisesResponse.length > 0 && (
-        <div className="card rounded-lg shadow-soft border border-neutral-200 p-4 md:p-6 mb-6 animate-fade-scale" style={{ animationDelay: '0.23s' }}>
-          <h2 className="text-lg md:text-xl font-semibold text-neutral-900 mb-6">
-            {t('practice.title')}
-          </h2>
-          <div className="space-y-6">
-            {exercisesResponse.map((exercise) => (
-              <div key={exercise.id} className="p-4 border border-neutral-200 rounded-lg">
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2">{exercise.title}</h3>
-                {exercise.description && (
-                  <p className="text-neutral-600 mb-4">{exercise.description}</p>
-                )}
-                <p className="text-sm text-neutral-500 mb-4">{exercise.instructions}</p>
-                <Link
-                  to={`/lessons/${lessonId}/practice`}
-                  className="btn-primary text-sm"
-                >
-                  {t('practice.execute', { defaultValue: 'Выполнить упражнение' })}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Flashcards Section */}
-      {flashcardDecksResponse && flashcardDecksResponse.length > 0 && (
-        <div className="card rounded-lg shadow-soft border border-neutral-200 p-4 md:p-6 mb-6 animate-fade-scale" style={{ animationDelay: '0.24s' }}>
-          <h2 className="text-lg md:text-xl font-semibold text-neutral-900 mb-4">
-            {t('flashcards.title')}
-          </h2>
-          <div className="space-y-4">
-            {flashcardDecksResponse.map((deck) => (
-              <div key={deck.id} className="p-4 border border-neutral-200 rounded-lg">
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2">{deck.title}</h3>
-                {deck.description && (
-                  <p className="text-neutral-600 mb-4 text-sm">{deck.description}</p>
-                )}
-                <p className="text-sm text-neutral-500 mb-4">
-                  {deck._count?.flashcards || 0} карточек
-                </p>
-                <Link
-                  to={`/flashcards/${deck.id}/study`}
-                  className="btn-primary text-sm"
-                >
-                  {t('flashcards.study')}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Quiz Section */}
-      <div className="mb-6 animate-fade-scale" style={{ animationDelay: '0.25s' }}>
-        <LessonQuiz 
-          lessonId={lessonId!}
-          onComplete={(result) => {
-            // Optionally update lesson progress when quiz is passed
-            if (result.passed) {
-              queryClient.invalidateQueries(['lesson', lessonId]);
-            }
-          }}
-        />
-      </div>
-
-      {/* Comments Section */}
-      <CommentsSection lessonId={lessonId!} />
-
-      {/* Navigation Buttons */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mt-6 md:mt-8 animate-fade-scale" style={{ animationDelay: '0.3s' }}>
-        {previousLesson ? (
-          <button
-            onClick={() => navigate(`/courses/${courseId}/lessons/${previousLesson.id}`)}
-            className="btn-secondary group flex items-center gap-3 flex-1"
-          >
-            <ChevronLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
-            <div className="flex-1 text-left">
-              <div className="text-xs text-neutral-500 mb-1">
-                {t('lessons.previousLesson', { defaultValue: 'Предыдущий урок' })}
-              </div>
-              <div className="font-semibold truncate">{previousLesson.title}</div>
-            </div>
-          </button>
-        ) : (
-          <div className="flex-1"></div>
-        )}
-
-        {nextLesson ? (
-          <button
-            onClick={() => navigate(`/courses/${courseId}/lessons/${nextLesson.id}`)}
-            className="btn-secondary group flex items-center gap-3 flex-1"
-          >
-            <div className="flex-1 text-right">
-              <div className="text-xs text-neutral-500 mb-1">
-                {t('lessons.nextLesson', { defaultValue: 'Следующий урок' })}
-              </div>
-              <div className="font-semibold truncate">{nextLesson.title}</div>
-            </div>
-            <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-          </button>
-        ) : (
-          <div className="flex-1"></div>
-        )}
       </div>
 
       {/* Delete File Confirmation Modal */}
